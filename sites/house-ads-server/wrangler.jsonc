@@ -1,0 +1,20 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "house-ads-server",
+  "main": "src/index.mjs",
+  "compatibility_date": "2026-08-04",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [{ "pattern": "ads.561.group", "custom_domain": true }],
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  },
+  "kv_namespaces": [
+    {
+      "binding": "AD_RECEIPTS",
+      "id": "56b1e309a1f24442a61d82b8b7eff38e"
+    }
+  ]
+}

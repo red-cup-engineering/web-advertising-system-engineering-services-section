@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://561.group/schema/advertising-services-section/advertising-delivery-event.schema.json",
+  "title": "AdvertisingDeliveryEvent",
+  "description": "One hash-chained house ad-server delivery receipt (impression or click), as appended to the Workers KV chain and later carried into the semantic-record-journal by scripts/sync-ad-receipts-to-journal.mjs.",
+  "type": "object",
+  "required": ["id", "seq", "type", "slot", "property", "creativeId", "prevHash", "occurredAt"],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "type": "string", "pattern": "^ni:///sha-256;[A-Za-z0-9_-]{43}$", "description": "Content address of this receipt's own body." },
+    "seq": { "type": "integer", "minimum": 0, "description": "Chain sequence number, assigned at append time." },
+    "type": { "enum": ["impression", "click"] },
+    "slot": { "type": "string", "minLength": 1 },
+    "property": { "type": "string", "minLength": 1, "description": "Requesting house property key." },
+    "creativeId": { "type": "string", "minLength": 1 },
+    "decisionReason": { "type": ["string", "null"], "description": "Selection-algorithm rationale, e.g. day-rotation index." },
+    "prevHash": { "type": ["string", "null"], "pattern": "^ni:///sha-256;[A-Za-z0-9_-]{43}$" },
+    "requestId": { "type": ["string", "null"] },
+    "occurredAt": { "type": "string", "format": "date-time" }
+  }
+}

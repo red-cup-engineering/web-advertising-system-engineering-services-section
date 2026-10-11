@@ -1,0 +1,16 @@
+{
+  "name": "@561-group/house-ads-server-site",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Deployable Cloudflare Worker site for the house advertising engine (v0, unlisted workers.dev route) — wraps @red-cup-engineering/web-advertising-system-engineering-services-section for deploy; carries no application logic of its own.",
+  "scripts": {
+    "check": "node --check src/index.mjs",
+    "test": "echo no site-level tests && exit 0",
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev"
+  },
+  "dependencies": {
+    "@red-cup-engineering/web-advertising-system-engineering-services-section": "workspace:*",
+    "wrangler": "4.127.1"
+  }
+}

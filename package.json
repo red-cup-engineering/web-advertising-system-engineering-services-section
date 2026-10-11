@@ -1,0 +1,26 @@
+{
+  "name": "@red-cup-engineering/web-advertising-system-engineering-services-section",
+  "version": "0.1.2",
+  "type": "module",
+  "description": "House advertising engine: contextual creative selection (the page says what it is about; nothing about the reader is kept), decision serving, and hash-chained delivery receipts for the 561 Group's own web properties. Creatives are the record data/records/house-creatives.json.",
+  "files": [
+    "src/",
+    "scripts/",
+    "data/records/",
+    "package.json"
+  ],
+  "scripts": {
+    "check": "sh -c 'for f in src/*.mjs src/*/*.mjs scripts/*.mjs; do node --check \"$f\" || exit 1; done'",
+    "test": "node --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "@red-cup-engineering/semiotic-eavt-services-section": "workspace:*"
+  },
+  "exports": {
+    "./advertising": "./src/advertising.mjs",
+    "./catalog": "./src/catalog.mjs",
+    "./receipts": "./src/receipts.mjs",
+    "./kv-chain": "./src/kv-chain.mjs",
+    "./web": "./src/web/worker.mjs"
+  }
+}

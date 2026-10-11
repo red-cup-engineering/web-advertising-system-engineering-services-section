@@ -1,0 +1,324 @@
+{
+  "type": "HouseCreativeCatalog",
+  "version": 1,
+  "description": "The creatives the house ad server serves on the 561 Group's own properties: its properties and its products. A creative is live only when its destination is live; contexts are the page contexts (Koios desks and tags, game genres) it fits, for contextual preference without tracking.",
+  "creatives": [
+    {
+      "id": "koios-news-v1",
+      "status": "live",
+      "slots": [
+        "*"
+      ],
+      "properties": [
+        "*"
+      ],
+      "property": "koios-news",
+      "contexts": [],
+      "tags": [
+        "house",
+        "news",
+        "media"
+      ],
+      "title": "koios.news",
+      "body": "Independent news, sourced and edited by the house's own editorial pipeline.",
+      "href": "https://koios.news/",
+      "imageAlt": null
+    },
+    {
+      "id": "play-561-group-v1",
+      "status": "live",
+      "slots": [
+        "*"
+      ],
+      "properties": [
+        "*"
+      ],
+      "property": "play-561-group",
+      "contexts": [
+        "games",
+        "culture-entertainment"
+      ],
+      "tags": [
+        "house",
+        "games",
+        "storefront"
+      ],
+      "title": "play.561.group",
+      "body": "Free browser games from the house — solitaire, weiqi, and more.",
+      "href": "https://play.561.group/",
+      "imageAlt": null
+    },
+    {
+      "id": "agent-operators-handbook-v2",
+      "status": "live",
+      "slots": [
+        "*"
+      ],
+      "properties": [
+        "*"
+      ],
+      "property": "agent-operators-handbook",
+      "contexts": [
+        "technology",
+        "ai",
+        "artificial-intelligence",
+        "software"
+      ],
+      "tags": [
+        "house",
+        "ebook",
+        "education",
+        "agent-ops"
+      ],
+      "title": "The Agent Operator's Handbook",
+      "body": "A field guide to dispatching, steering and recovering several AI coding agents at once. Ebook, $29.",
+      "href": "https://shop.561.group/goods/the-agent-operators-handbook",
+      "imageAlt": null
+    },
+    {
+      "id": "the-x402-economy-v1",
+      "status": "live",
+      "slots": [
+        "*"
+      ],
+      "properties": [
+        "*"
+      ],
+      "property": "the-x402-economy",
+      "contexts": [
+        "crypto",
+        "business-markets",
+        "technology",
+        "stablecoins",
+        "payments"
+      ],
+      "tags": [
+        "house",
+        "ebook",
+        "economics",
+        "payments"
+      ],
+      "title": "The x402 Economy",
+      "body": "How the web's unused payment code became a way for software to pay, and what it has earned so far. A sourced ebook, $9.",
+      "href": "https://shop.561.group/goods/the-x402-economy",
+      "imageAlt": null
+    },
+    {
+      "id": "project-management-course-by-course-v1",
+      "status": "live",
+      "slots": [
+        "*"
+      ],
+      "properties": [
+        "*"
+      ],
+      "property": "project-management-course-by-course",
+      "contexts": [
+        "business-markets",
+        "technology",
+        "careers",
+        "education",
+        "project-management"
+      ],
+      "tags": [
+        "house",
+        "ebook",
+        "study-companion",
+        "project-management"
+      ],
+      "title": "Project Management, Course by Course",
+      "body": "A study companion to Google’s Project Management Certificate: one chapter per course, self-checks with answers. Independent. $9.",
+      "href": "https://shop.561.group/goods/project-management-course-by-course",
+      "imageAlt": null
+    },
+    {
+      "id": "the-capm-domain-by-domain-v1",
+      "status": "live",
+      "slots": [
+        "*"
+      ],
+      "properties": [
+        "*"
+      ],
+      "property": "the-capm-domain-by-domain",
+      "contexts": [
+        "business-markets",
+        "careers",
+        "education",
+        "project-management",
+        "certification"
+      ],
+      "tags": [
+        "house",
+        "ebook",
+        "study-companion",
+        "project-management",
+        "exam-prep"
+      ],
+      "title": "The CAPM, Domain by Domain",
+      "body": "A study companion to PMI’s CAPM exam, task by task, with a 40-question practice exam. Independent of PMI. $12.",
+      "href": "https://shop.561.group/goods/the-capm-domain-by-domain",
+      "imageAlt": null
+    },
+    {
+      "id": "data-analytics-course-by-course-v1",
+      "status": "live",
+      "slots": [
+        "*"
+      ],
+      "properties": [
+        "*"
+      ],
+      "property": "data-analytics-course-by-course",
+      "contexts": [
+        "technology",
+        "business-markets",
+        "careers",
+        "education",
+        "data"
+      ],
+      "tags": [
+        "house",
+        "ebook",
+        "study-companion",
+        "data-analytics"
+      ],
+      "title": "Data Analytics, Course by Course",
+      "body": "A study companion to Google’s Data Analytics Certificate: spreadsheets, SQL, Tableau and Python, with tested code. Independent. $9.",
+      "href": "https://shop.561.group/goods/data-analytics-course-by-course",
+      "imageAlt": null
+    },
+    {
+      "id": "ux-design-course-by-course-v1",
+      "status": "live",
+      "slots": [
+        "*"
+      ],
+      "properties": [
+        "*"
+      ],
+      "property": "ux-design-course-by-course",
+      "contexts": [
+        "technology",
+        "culture-entertainment",
+        "careers",
+        "education",
+        "design"
+      ],
+      "tags": [
+        "house",
+        "ebook",
+        "study-companion",
+        "ux-design"
+      ],
+      "title": "UX Design, Course by Course",
+      "body": "A study companion to Google’s UX Design Certificate: the design process from its sources, accessibility throughout. Independent. $9.",
+      "href": "https://shop.561.group/goods/ux-design-course-by-course",
+      "imageAlt": null
+    },
+    {
+      "id": "business-management-course-by-course-v1",
+      "status": "live",
+      "slots": [
+        "*"
+      ],
+      "properties": [
+        "*"
+      ],
+      "property": "business-management-course-by-course",
+      "contexts": [
+        "business-markets",
+        "careers",
+        "education",
+        "management"
+      ],
+      "tags": [
+        "house",
+        "ebook",
+        "study-companion",
+        "business-management"
+      ],
+      "title": "Business Management, Course by Course",
+      "body": "A study companion to Cornell’s Business Management Essentials certificate: finance, marketing, strategy, people. Independent. $12.",
+      "href": "https://shop.561.group/goods/business-management-course-by-course",
+      "imageAlt": null
+    },
+    {
+      "id": "business-strategy-course-by-course-v1",
+      "status": "live",
+      "slots": [
+        "*"
+      ],
+      "properties": [
+        "*"
+      ],
+      "property": "business-strategy-course-by-course",
+      "contexts": [
+        "business-markets",
+        "technology",
+        "careers",
+        "education",
+        "strategy"
+      ],
+      "tags": [
+        "house",
+        "ebook",
+        "study-companion",
+        "business-strategy"
+      ],
+      "title": "Business Strategy, Course by Course",
+      "body": "A study companion to Cornell’s Business Strategy certificate: value, disruption, alliances, game theory, platforms. Independent. $12.",
+      "href": "https://shop.561.group/goods/business-strategy-course-by-course",
+      "imageAlt": null
+    },
+    {
+      "id": "house-agent-plugin-v1",
+      "status": "coming-soon",
+      "slots": [
+        "*"
+      ],
+      "properties": [
+        "*"
+      ],
+      "property": "house-agent-plugin",
+      "contexts": [],
+      "tags": [
+        "house",
+        "tooling",
+        "agents"
+      ],
+      "title": "The house agent plugin",
+      "body": "Coming soon: the house's own Claude Code plugin.",
+      "href": "https://561.group/plugin",
+      "imageAlt": null
+    },
+    {
+      "id": "ice-out-v1",
+      "status": "live",
+      "slots": [
+        "*"
+      ],
+      "properties": [
+        "*"
+      ],
+      "property": "ice-out",
+      "contexts": [
+        "culture-entertainment",
+        "culture",
+        "entertainment",
+        "books",
+        "romance"
+      ],
+      "tags": [
+        "house",
+        "ebook",
+        "novel",
+        "romance"
+      ],
+      "title": "Ice Out",
+      "body": "A slow-burn romance on the shore of Lake Superior: one winter, one lift bridge, eleven years of saying nothing. A novel. $3.99.",
+      "href": "https://shop.561.group/goods/ice-out",
+      "imageAlt": null
+    }
+  ]
+}

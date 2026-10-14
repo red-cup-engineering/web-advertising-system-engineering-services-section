@@ -146,6 +146,81 @@ test("GET /click still redirects when receipt KV persistence fails", async () =>
   }
 });
 
+
+test("KV Free write exhaustion stops repeated ad/click puts in this Worker isolate until UTC reset", async () => {
+  let clock = Date.parse("2026-10-13T23:59:00.000Z");
+  const reset = Date.parse("2026-10-14T00:00:00.000Z");
+  const worker = createAdServerWorker({ nowMs: () => clock });
+  const kv = createFakeKv();
+  const nativePut = kv.put;
+  const putKeys = [];
+  kv.put = async (key, value) => {
+    putKeys.push(key);
+    if (clock < reset) {
+      const error = new Error("KV PUT write limit exceeded: hidden-provider-identifier");
+      error.status = 429;
+      throw error;
+    }
+    await nativePut(key, value);
+  };
+  const output = [];
+  const previousError = console.error;
+  console.error = message => output.push(message);
+  try {
+    const url = "https://ads.example/ad?slot=footer&property=play-561-group";
+    const first = await (await worker.fetch(new Request(url), { AD_RECEIPTS: kv })).json();
+    assert.equal(first.receiptStatus, "unavailable");
+    assert.equal(putKeys.length, 1, "one real KV refusal establishes the isolate hold");
+    assert.equal(output.length, 1);
+    const gap = JSON.parse(output[0]);
+    assert.equal(gap.errorClass, "kv-write-quota-exhausted");
+    assert.doesNotMatch(output[0], /hidden-provider-identifier/);
+    const second = await (await worker.fetch(new Request(url), { AD_RECEIPTS: kv })).json();
+    assert.ok(second.creative);
+    assert.equal(second.receiptStatus, "unavailable");
+    const click = await worker.fetch(new Request(
+      "https://ads.example/click?slot=footer&property=play-561-group&creative=koios-news-v1",
+      { redirect: "manual" }), { AD_RECEIPTS: kv });
+    assert.equal(click.status, 302);
+    assert.equal(click.headers.get("x-561-receipt-status"), "unavailable");
+    assert.equal(putKeys.length, 1, "subsequent events must not amplify put failures");
+    assert.equal(output.length, 1, "the known quota gap must not spam logs every request");
+    clock = reset;
+    const afterReset = await (await worker.fetch(new Request(url), { AD_RECEIPTS: kv })).json();
+    assert.equal(afterReset.receiptStatus, "recorded");
+    assert.equal(putKeys.length, 3, "the provider reset permits normal two-key receipt chain");
+    assert.ok(afterReset.receipt.id);
+  } finally { console.error = previousError; }
+});
+
+test("unknown KV failures remain retryable and never expose raw provider error details", async () => {
+  const worker = createAdServerWorker();
+  const kv = createFakeKv();
+  let attempts = 0;
+  kv.put = async () => { attempts += 1; throw new Error("transport fault secret=PRIVATE_NOT_A_TOKEN"); };
+  const errors = [], before = console.error;
+  console.error = message => errors.push(message);
+  try {
+    const url = "https://ads.example/ad?slot=footer&property=play-561-group";
+    for (let i = 0; i < 2; i++) {
+      const response = await (await worker.fetch(new Request(url), { AD_RECEIPTS: kv })).json();
+      assert.equal(response.receiptStatus, "unavailable");
+    }
+    assert.equal(attempts, 2, "unrelated transient failures do not establish a quota hold");
+    assert.equal(errors.length, 2);
+    assert.equal(JSON.parse(errors[0]).errorClass, "receipt-storage-error");
+    assert.doesNotMatch(errors.join(" "), /PRIVATE_NOT_A_TOKEN|secret=/);
+  } finally { console.error = before; }
+});
+
+test("clock admission is explicit and does not change unbound receipts", async () => {
+  assert.throws(() => createAdServerWorker({ nowMs: null }), /nowMs must provide/);
+  const worker = createAdServerWorker({ nowMs: () => Date.parse("2026-10-13T23:59:50Z") });
+  const received = await (await worker.fetch(new Request(
+    "https://ads.example/ad?slot=footer&property=play-561-group"), {})).json();
+  assert.equal(received.receiptStatus, "unbound");
+});
+
 test("unknown route returns 404", async () => {
   const worker = createAdServerWorker();
   const response = await worker.fetch(new Request("https://ads.example/nowhere"), {});

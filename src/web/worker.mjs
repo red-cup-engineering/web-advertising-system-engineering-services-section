@@ -21,6 +21,21 @@ function publicCreative(creative) {
   return { id, title, body, href, imageAlt: imageAlt ?? null };
 }
 
+/** Cloudflare's free Workers KV PUT limit resets daily at 00:00 UTC.
+ * Hold additional writes in the current isolate after a native 429 or explicit
+ * write quota refusal; do not create another database or authoritative ledger.
+ */
+function kvWriteQuotaExhausted(error) {
+  if (error?.status === 429 || error?.statusCode === 429) return true;
+  const message = typeof error?.message === "string" ? error.message : "";
+  return /\b429\b|(?:KV|put|write).*(?:quota|limit|exceed)|(?:quota|limit|exceed).*(?:KV|put|write)/iu.test(message);
+}
+
+function nextUtcQuotaReset(nowMs) {
+  const when = new Date(nowMs);
+  return Date.UTC(when.getUTCFullYear(), when.getUTCMonth(), when.getUTCDate() + 1);
+}
+
 /** Emit a structured operational gap event without creating a second receipt ledger. */
 function reportReceiptGap({ type, slot, property, creativeId, decisionReason, requestId, error }) {
   console.error(JSON.stringify({
@@ -33,7 +48,8 @@ function reportReceiptGap({ type, slot, property, creativeId, decisionReason, re
     creativeId,
     decisionReason,
     requestId,
-    error: error instanceof Error ? error.message : String(error),
+    errorClass: kvWriteQuotaExhausted(error)
+      ? "kv-write-quota-exhausted" : "receipt-storage-error",
   }));
 }
 
@@ -48,7 +64,16 @@ function reportReceiptGap({ type, slot, property, creativeId, decisionReason, re
  * @param {import("../catalog.mjs").AdCreative[]} [options.catalog]
  * @returns {{fetch: (request: Request, env: object) => Promise<Response>}}
  */
-export function createAdServerWorker({ catalog = HOUSE_CREATIVE_CATALOG } = {}) {
+export function createAdServerWorker({ catalog = HOUSE_CREATIVE_CATALOG, nowMs = Date.now } = {}) {
+  if (typeof nowMs !== "function") throw new TypeError("nowMs must provide the current epoch milliseconds");
+  // This is local backpressure on one Worker isolate, not a claim of globally
+  // synchronized quota state. The provider remains authoritative.
+  let kvPutHoldUntilMs = 0;
+  const receiptWritesOpen = () => nowMs() >= kvPutHoldUntilMs;
+  const onReceiptWriteFailure = (details, error) => {
+    if (kvWriteQuotaExhausted(error)) kvPutHoldUntilMs = nextUtcQuotaReset(nowMs());
+    reportReceiptGap({ ...details, error });
+  };
   return {
     async fetch(request, env) {
       const url = new URL(request.url);
@@ -71,7 +96,7 @@ export function createAdServerWorker({ catalog = HOUSE_CREATIVE_CATALOG } = {}) 
         if (!picked) return json({ error: "no eligible creative for slot/property" }, { status: 404 });
         let receipt = null;
         let receiptStatus = kv ? "recorded" : "unbound";
-        if (kv) {
+        if (kv && receiptWritesOpen()) {
           const requestId = crypto.randomUUID();
           try {
             receipt = await appendChainedReceipt(kv, {
@@ -84,9 +109,9 @@ export function createAdServerWorker({ catalog = HOUSE_CREATIVE_CATALOG } = {}) 
             });
           } catch (error) {
             receiptStatus = "unavailable";
-            reportReceiptGap({ type: "impression", slot, property, creativeId: picked.creative.id, decisionReason: picked.decision.reason, requestId, error });
+            onReceiptWriteFailure({ type: "impression", slot, property, creativeId: picked.creative.id, decisionReason: picked.decision.reason, requestId }, error);
           }
-        }
+        } else if (kv) receiptStatus = "unavailable";
         return json({
           creative: publicCreative(picked.creative),
           receipt: receipt ? { id: receipt.id, seq: receipt.seq } : null,
@@ -102,7 +127,7 @@ export function createAdServerWorker({ catalog = HOUSE_CREATIVE_CATALOG } = {}) 
         const creative = catalog.find((entry) => entry.id === creativeId);
         if (!creative) return json({ error: "unknown creative" }, { status: 404 });
         let receiptStatus = kv ? "recorded" : "unbound";
-        if (kv) {
+        if (kv && receiptWritesOpen()) {
           const requestId = crypto.randomUUID();
           try {
             await appendChainedReceipt(kv, {
@@ -115,9 +140,9 @@ export function createAdServerWorker({ catalog = HOUSE_CREATIVE_CATALOG } = {}) 
             });
           } catch (error) {
             receiptStatus = "unavailable";
-            reportReceiptGap({ type: "click", slot, property, creativeId, decisionReason: "publisher-click", requestId, error });
+            onReceiptWriteFailure({ type: "click", slot, property, creativeId, decisionReason: "publisher-click", requestId }, error);
           }
-        }
+        } else if (kv) receiptStatus = "unavailable";
         return new Response(null, { status: 302, headers: { location: creative.href, "x-561-receipt-status": receiptStatus } });
       }
 

@@ -1,5 +1,5 @@
 import { HOUSE_CREATIVE_CATALOG } from "../catalog.mjs";
-import { selectCreative } from "../advertising.mjs";
+import { listEligibleCreatives, selectCreative } from "../advertising.mjs";
 import { appendChainedReceipt, chainHead, listChain } from "../kv-chain.mjs";
 
 /**
@@ -124,8 +124,10 @@ export function createAdServerWorker({ catalog = HOUSE_CREATIVE_CATALOG, nowMs =
         const property = url.searchParams.get("property");
         const creativeId = url.searchParams.get("creative");
         if (!slot || !property || !creativeId) return json({ error: "slot, property, and creative query parameters are required" }, { status: 400 });
-        const creative = catalog.find((entry) => entry.id === creativeId);
-        if (!creative) return json({ error: "unknown creative" }, { status: 404 });
+        // Direct /click calls must satisfy the same live/slot/property eligibility
+        // as /ad. Refused clicks are neither redirected nor receipted.
+        const creative = listEligibleCreatives({ catalog, slot, property }).find((entry) => entry.id === creativeId);
+        if (!creative) return json({ error: "creative is not eligible for slot/property" }, { status: 404 });
         let receiptStatus = kv ? "recorded" : "unbound";
         if (kv && receiptWritesOpen()) {
           const requestId = crypto.randomUUID();

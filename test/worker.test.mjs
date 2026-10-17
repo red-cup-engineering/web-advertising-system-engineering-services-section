@@ -118,6 +118,39 @@ test("GET /click redirects to the creative href and records a click receipt", as
   assert.equal(entries[0].type, "click");
 });
 
+test("GET /click refuses inactive, self-promoted and unknown creatives without writing receipts", async () => {
+  const worker = createAdServerWorker();
+  const kv = createFakeKv();
+  for (const url of [
+    "https://ads.example/click?slot=footer&property=play-561-group&creative=house-agent-plugin-v1",
+    "https://ads.example/click?slot=footer&property=koios-news&creative=koios-news-v1",
+    "https://ads.example/click?slot=footer&property=play-561-group&creative=nonexistent",
+  ]) {
+    const response = await worker.fetch(new Request(url, { redirect: "manual" }), { AD_RECEIPTS: kv });
+    assert.equal(response.status, 404, url);
+    assert.equal(response.headers.get("location"), null);
+  }
+  const { entries } = await (await worker.fetch(new Request("https://ads.example/receipts"), { AD_RECEIPTS: kv })).json();
+  assert.deepEqual(entries, [], "refused clicks must never enter the receipt chain");
+});
+
+test("GET /click enforces slot/property matching and still redirects for eligible campaigns", async () => {
+  const worker = createAdServerWorker({ catalog: [
+    { id: "approved", status: "live", property: "promoted", slots: ["footer"], properties: ["publisher-ok"], href: "https://example.com/" },
+  ] });
+  for (const url of [
+    "https://ads.example/click?slot=sidebar&property=publisher-ok&creative=approved",
+    "https://ads.example/click?slot=footer&property=publisher-other&creative=approved",
+  ]) {
+    const response = await worker.fetch(new Request(url, { redirect: "manual" }), {});
+    assert.equal(response.status, 404, url);
+    assert.equal(response.headers.get("location"), null);
+  }
+  const ok = await worker.fetch(new Request("https://ads.example/click?slot=footer&property=publisher-ok&creative=approved", { redirect: "manual" }), {});
+  assert.equal(ok.status, 302);
+  assert.equal(ok.headers.get("location"), "https://example.com/");
+});
+
 test("GET /click still redirects when receipt KV persistence fails", async () => {
   const worker = createAdServerWorker();
   const kv = createFakeKv();

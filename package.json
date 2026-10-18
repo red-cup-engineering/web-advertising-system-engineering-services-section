@@ -22,5 +22,9 @@
     "./receipts": "./src/receipts.mjs",
     "./kv-chain": "./src/kv-chain.mjs",
     "./web": "./src/web/worker.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/red-cup-engineering/web-advertising-system-engineering-services-section.git"
   }
 }

@@ -1,0 +1,4 @@
+[submodule "house-ads-server-site"]
+	path = sites/house-ads-server
+	url = https://github.com/red-cup-engineering/house-ads-server-site.git
+	branch = main

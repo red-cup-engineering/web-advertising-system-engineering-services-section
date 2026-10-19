@@ -107,3 +107,33 @@ test("third-party contextual admission fails closed while house placement still 
   // unrelated broadly eligible house ad cannot hide a valid matched placement.
   assert.equal(selectCreative({catalog:[house,paid],slot:"footer",property:"publisher",context:["science"],now}).creative.id,"p");
 });
+
+// A merchant's acknowledged recurring offer must be carried to real publisher
+// inventory; price-only source or a proposed campaign is not distribution.
+test("existing house-ad selector carries an actual sustaining support offer to two distinct real publishers", async () => {
+  const { HOUSE_CREATIVE_CATALOG } = await import("../src/catalog.mjs");
+  const campaign = HOUSE_CREATIVE_CATALOG.find(row => row.id === "561-group-sustaining-support-20261019");
+  assert.ok(campaign);
+  assert.equal(campaign.relationship, "house");
+  assert.equal(campaign.status, "live");
+  assert.equal(campaign.href, "https://buy.stripe.com/28E28s1b4gJcb2Y3Io5EY02");
+  assert.match(campaign.body, /\$10 per month/);
+  assert.match(campaign.body, /cancel anytime/);
+  assert.match(campaign.body, /No exclusive access, influence, or tax deduction/);
+  const now = new Date("2026-10-19T12:00:00.000Z");
+  const publishers = [
+    {property:"koios-news", slot:"afterArticle", context:["science"]},
+    {property:"play-561-group", slot:"belowGame", context:["games"]},
+  ];
+  for (const publisher of publishers) {
+    const candidates = listEligibleCreatives({catalog:HOUSE_CREATIVE_CATALOG,...publisher,now});
+    assert.ok(candidates.some(row => row.id === campaign.id), publisher.property);
+    const targeted = selectCreative({catalog:[campaign],...publisher,now});
+    assert.equal(targeted?.creative?.id,campaign.id);
+    assert.equal(targeted.decision.reason.startsWith("context-match:"),true);
+  }
+  for (const property of ["shop-561-group","561-group-sustaining-support","other-merchant"]) {
+    assert.ok(!listEligibleCreatives({catalog:[campaign],slot:"afterArticle",property,context:["science"],now}).length);
+  }
+  assert.ok(!listEligibleCreatives({catalog:[{...campaign,status:"coming-soon"}],slot:"afterArticle",property:"koios-news",context:["science"],now}).length);
+});

@@ -331,6 +331,37 @@
       "href": "https://shop.561.group/goods/ice-out",
       "imageAlt": null,
       "relationship": "house"
+    },
+    {
+      "id": "561-group-sustaining-support-20261019",
+      "status": "live",
+      "slots": [
+        "*"
+      ],
+      "properties": [
+        "koios-news",
+        "play-561-group"
+      ],
+      "property": "561-group-sustaining-support",
+      "contexts": [
+        "science",
+        "technology",
+        "business-markets",
+        "education",
+        "culture-entertainment",
+        "games"
+      ],
+      "tags": [
+        "house",
+        "sustaining-support",
+        "public-research",
+        "monthly"
+      ],
+      "title": "Keep the commons open",
+      "body": "Sustain 561 Group public research and free-to-read technical work for $10 per month. Voluntary recurring support; cancel anytime. No exclusive access, influence, or tax deduction.",
+      "href": "https://buy.stripe.com/28E28s1b4gJcb2Y3Io5EY02",
+      "imageAlt": null,
+      "relationship": "house"
     }
   ]
 }

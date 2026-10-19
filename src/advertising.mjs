@@ -1,3 +1,5 @@
+import { hashSeed } from "@red-cup-engineering/computer-data-engineering-services-section/randomization/hash-seed";
+
 /**
  * Contextual-only creative selection: no cookies, no cross-request user
  * state, no behavioral profile — the only signal is the requested slot and
@@ -42,7 +44,7 @@ export function selectCreative({ catalog, slot, property, context = [], now = ne
   const matching = wanted.size === 0 ? [] : all.filter((creative) => (creative.contexts ?? []).some((value) => wanted.has(value)));
   const eligible = matching.length > 0 ? matching : all;
   const dayStamp = now.toISOString().slice(0, 10);
-  const index = Math.abs(hashString(`${slot}\u0000${property}\u0000${dayStamp}`)) % eligible.length;
+  const index = Math.abs(hashSeed(`${slot}\u0000${property}\u0000${dayStamp}`) | 0) % eligible.length;
   const creative = eligible[index];
   return {
     creative,
@@ -56,12 +58,3 @@ export function selectCreative({ catalog, slot, property, context = [], now = ne
   };
 }
 
-/** Small non-cryptographic string hash (FNV-1a) for deterministic rotation. */
-function hashString(value) {
-  let hash = 0x811c9dc5;
-  for (let i = 0; i < value.length; i += 1) {
-    hash ^= value.charCodeAt(i);
-    hash = Math.imul(hash, 0x01000193);
-  }
-  return hash;
-}

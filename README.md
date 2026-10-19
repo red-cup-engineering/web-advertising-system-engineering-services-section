@@ -1,58 +1,25 @@
 # Web advertising system
 
-The house advertising engine, `@red-cup-engineering/web-advertising-system-engineering-services-section`: the ad server the
-561 Group's own properties (koios.news, play.561.group) call for their house ad slots.
+The 561 Group's existing contextual ad server serving its own publishers (including Koios.News and Play) without cross-site identity, cookies, behavioral profiles, or personal targeting. The public Cloudflare deployment is carried by `house-ads-server-site`; this package supplies the original selector and event producer.
 
-- `data/records/house-creatives.json` is the one creative catalog. A creative is `live` only when
-  its destination is live. Its `contexts` name the page contexts it fits: Koios desks and article
-  tags, game genres.
-- `src/advertising.mjs` selects contextually and never behaviorally. The requesting page says what
-  it is about (`/ad?slot&property&context`), creatives declaring that context are preferred, and
-  the pick rotates by day. No cookie or reader profile is kept. A creative never advertises the
-  property it promotes.
-- `src/kv-chain.mjs` and `src/receipts.mjs` keep a hash-chained receipt of every impression and
-  click. `GET /receipts` and `GET /catalog` expose them. `scripts/sync-ad-receipts-to-journal.mjs`
-  copies the chain into the one journal.
-- `sites/house-ads-server` is the Cloudflare Worker that deploys it
-  (`ads.561.group`).
+## Current application contract
 
-The engine was deleted from the tree on 2026-09-19 (f773c353e79) while its Worker kept serving.
-It was revived on 2026-09-27 from that commit's parent, with the catalog moved from code into its
-record and contextual preference added.
+- `GET /ad?slot=…&property=…[&context=…]` selects an eligible creative. **Selection does not record an impression or any other delivery event.**
+- Publishers render the creative and any required sponsored or affiliate material-connection disclosure, eligibility, and risk notice. Refused/incomplete creatives cannot be displayed.
+- `POST /view?slot=…&property=…&creative=…[&context=…]` accepts a **publisher-browser-reported view opportunity** only after the consumer observes at least 50% of the placement within a visible document for one continuous second. It never establishes a verified human, accredited impression, billable exposure, or sale. The server rechecks campaign eligibility and expiry before writing, and responds 202 only after the event is stored; an unbound/refused write returns 503.
+- `GET /click?slot=…&property=…&creative=…[&context=…]` rechecks current eligibility, emits a **redirect-request** event where storage permits, and redirects. A request is not proof of a human click, referral qualification, completed purchase, or revenue.
+- `GET /receipts?series=current&limit=…&cursor=…` provides **cursor-paged** new events. `series=legacy` exposes the original v1 `chain:entry:` history read-only; no historical IDs are rewritten. `GET /catalog` exposes the same declared campaign catalog.
 
-## Campaign admission and publisher rendering
+## Pure data and storage boundaries
 
-Each creative declares `relationship` as `house`, `sponsored`, or
-`affiliate`. House creatives identify the Group's own properties and offers.
-A paid or affiliate creative must also declare its truthful `disclosure`, an
-absolute HTTPS destination, a future `expiresAt` timestamp, and at least one
-`allowedContexts` page topic. An affiliate creative additionally requires
-`eligibility` and `riskNotice` text or the engine refuses to serve or redirect
-it. Page context must match a declared topic on both `GET /ad` and `GET /click`;
-for paid campaigns the `allowedContexts` are also the contextual selection
-preference. All dated creatives stop being eligible **at** the expiry instant,
-regardless of a stale catalog `status: "live"`.
+`src/advertising.mjs` owns domain eligibility and context-only selection; its deterministic rotation imports `hashSeed` from Computer Data. `src/delivery-events.mjs` creates the immutable v2 event identity using the original JSON canonicalization and RFC 6920 NI suppliers. `src/kv-events.mjs` issues one `KV.put` for each independently addressed event: no racy global head, sequence, CAS illusion or two-write quota multiplication.
 
-`GET /ad` returns `creative.relationship`, `creative.disclosure`, and
-`creative.linkRel` (the last two are null for house creatives), as well as
-`allowedContexts`, `eligibility`, `riskNotice`, and `expiresAt` for
-third-party campaigns. Publisher renderers must display a non-house disclosure
-next to the offer, present affiliate terms/risk, retain page context in their
-redirect, and put the
-returned `linkRel` on its clickable link. These fields carry the required
-material-connection information to humans and agents; merely obtaining this
-JSON **does not** constitute disclosure on a published page.
+The old two-write `src/kv-chain.mjs` producer is **retired**, not wrapped in another interface. `src/receipts.mjs` remains a read-only historical v1 body-identity implementation, with its original byte identity regression fixture. The original `scripts/sync-ad-receipts-to-journal.mjs` importer consumes every available KV cursor page of both series, preserving source IDs in the semantic record journal; repeated runs can recover entries not yet visible because Workers KV is eventually consistent. Legacy "impression" receipts are historical server events and must not be relabeled as actual human views.
 
-The current source catalog contains only house creatives. Do not activate a
-third-party campaign until the receiving property renders those fields and
-the actual offer, terms, rights, merchant attribution and expiry are qualified.
-Do not treat an ad API response as a verified human impression or a redirect
-request as an independently received purchase. Receipt KV write failure means
-that the delivered response has **no durable ad attribution**; never synthesize
-a conversion count from it.
+The current Worker binding `AD_RECEIPTS` continues to be the only advertising event store. Quota exhaustion prevents persistence and is reported without leaking provider errors. Browser view reports have no fraud-certification mechanism; **they must not serve as paid billing units**. The current house catalog carries no activated third-party campaigns. Real external campaigns still require offer-specific rights, terms, eligible users, customer authority and independent commercial receiving.
 
-The original FNV rotation seed now comes from Computer Data; JSON identity
-comes from the house JSON service; RFC 6920 NI hashing comes from the URI
-service. Historic ad receipt byte identity is pinned by a golden fixture, not
-recomputed as a SignCell/CBOR semantic identity. Ad slots, campaign admission,
-redirects and merchant disclosures stay downstream in this advertising engine.
+## Ownership and release
+
+Red Cup owns generic ad selection, delivery-event type and the HTTP Worker; Computer Data, JSON and URI own reusable primitives; Causeway publishers own rendering, disclosure and contextual selection inputs; Coesite owns deployments and release/rollback procedures. Metrologic → SignCraft remain pure and do not absorb HTTP, payment, campaign policy or employer authority. Build and test the original `npm run check && npm test` before immutable package publication; the existing `red-cup-engineering/house-ads-server-site` consumer selects the received package. A source commit, GitHub run, request counter or demo is not an installed Cloudflare release.
+
+Industry references: [MRC/IAB viewable display criteria](https://www.iab.com/wp-content/uploads/2015/06/MRC-Viewable-Ad-Impression-Measurement-Guideline.pdf), [Cloudflare Workers KV concurrent writes](https://developers.cloudflare.com/kv/api/write-key-value-pairs/), [KV native pagination](https://developers.cloudflare.com/kv/api/list-keys/).

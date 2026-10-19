@@ -2,6 +2,7 @@
 import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
 import { createSemanticRecordJournal } from "@red-cup-engineering/semiotic-eavt-services-section/record-semantic-record";
+import { buildDeliveryReceipt } from "../src/receipts.mjs";
 
 const CATEGORY = "advertising.delivery-receipt";
 const SECTION_ROOT = fileURLToPath(new URL("..", import.meta.url));
@@ -46,6 +47,11 @@ export async function readAdReceiptSnapshot(adServerUrl, fetchImpl = fetch) {
           typeof entry.id !== "string" || !entry.id ||
           entry.prevHash !== expectedPrevious)
         throw new Error("ad receipt source contains a sequence or hash-chain gap");
+      // Verify the original canonical receipt address, not merely the textual
+      // prevHash chain. Wrong content must never enter the semantic journal.
+      const original = await buildDeliveryReceipt(entry);
+      if (original.id !== entry.id)
+        throw new Error("ad receipt source address mismatch");
       rows.push(entry);
       expectedPrevious = entry.id;
       next += 1;

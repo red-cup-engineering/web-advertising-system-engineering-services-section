@@ -66,13 +66,39 @@ function reportReceiptGap({ type, slot, property, creativeId, decisionReason, re
   }));
 }
 
+/** A placement identity is a bounded catalog coordinate, not an arbitrary reader label. */
+function placementName(value) {
+  return typeof value === "string" && /^[A-Za-z][A-Za-z0-9-]{0,63}$/u.test(value);
+}
+
+/**
+ * Best-effort, aggregate activity, not a durable receipt or a human impression.
+ * No URL, address, user agent, cookie, requestId, or person-level signal enters
+ * this event. WAE can sample; "submitted" means only that its write was invoked.
+ */
+function recordActivity(env, { event, slot, property, creativeId, relationship }) {
+  const dataset = env?.AD_ACTIVITY;
+  if (typeof dataset?.writeDataPoint !== "function") return "unbound";
+  try {
+    dataset.writeDataPoint({
+      indexes: [property],
+      blobs: [event, slot, creativeId, relationship],
+      doubles: [1],
+    });
+    return "submitted";
+  } catch {
+    return "unavailable";
+  }
+}
+
 /**
  * Build the house ad server's fetch handler. GET /ad?slot&property[&context] returns
- * one contextual (no cookies, no cross-request profile) creative and
- * records an impression receipt; GET /click redirects and records a click
- * receipt; GET /receipts and GET /catalog expose the same chain and
- * catalog transparently — the receipts-native, auditable-by-default
- * differentiator no incumbent network offers.
+ * one contextual (no cookies, no cross-request profile) creative. Ordinary
+ * house responses and redirects emit nonbillable aggregate activity without
+ * consuming Workers KV. Paid campaigns require the existing receipt chain
+ * before a creative response or redirect. GET /receipts remains the custody
+ * reader for that chain and its historic entries; GET /catalog reads offers.
+ * Analytics activity is not a witnessed human view, conversion, or payment.
  * @param {object} [options]
  * @param {import("../catalog.mjs").AdCreative[]} [options.catalog]
  * @returns {{fetch: (request: Request, env: object) => Promise<Response>}}
@@ -103,32 +129,39 @@ export function createAdServerWorker({ catalog = HOUSE_CREATIVE_CATALOG, nowMs =
       if (url.pathname === "/ad") {
         const slot = url.searchParams.get("slot");
         const property = url.searchParams.get("property");
-        if (!slot || !property) return json({ error: "slot and property query parameters are required" }, { status: 400 });
+        if (!placementName(slot) || !placementName(property))
+          return json({ error: "invalid slot or property" }, { status: 400 });
         const context = pageContext(url);
         const picked = selectCreative({ catalog, slot, property, context, now: new Date(nowMs()) });
         if (!picked) return json({ error: "no eligible creative for slot/property" }, { status: 404 });
+
         let receipt = null;
-        let receiptStatus = kv ? "recorded" : "unbound";
-        if (kv && receiptWritesOpen()) {
+        // Paid decisions need the existing accountable custody. An ordinary
+        // house promotion never spends two KV writes on a nonbillable response.
+        if (picked.creative.relationship !== "house") {
+          if (!kv || !receiptWritesOpen())
+            return json({ error: "paid campaign receipt unavailable" }, { status: 503 });
           const requestId = crypto.randomUUID();
           try {
             receipt = await appendChainedReceipt(kv, {
-              type: "impression",
-              slot,
-              property,
+              type: "impression", slot, property,
               creativeId: picked.creative.id,
-              decisionReason: picked.decision.reason,
-              requestId,
+              decisionReason: picked.decision.reason, requestId,
             });
           } catch (error) {
-            receiptStatus = "unavailable";
             onReceiptWriteFailure({ type: "impression", slot, property, creativeId: picked.creative.id, decisionReason: picked.decision.reason, requestId }, error);
+            return json({ error: "paid campaign receipt unavailable" }, { status: 503 });
           }
-        } else if (kv) receiptStatus = "unavailable";
+        }
+        const activityStatus = recordActivity(env, {
+          event: "creative-response", slot, property,
+          creativeId: picked.creative.id, relationship: picked.creative.relationship,
+        });
         return json({
           creative: publicCreative(picked.creative),
           receipt: receipt ? { id: receipt.id, seq: receipt.seq } : null,
-          receiptStatus,
+          receiptStatus: receipt ? "recorded" : "not-applicable",
+          activityStatus,
         });
       }
 
@@ -136,29 +169,41 @@ export function createAdServerWorker({ catalog = HOUSE_CREATIVE_CATALOG, nowMs =
         const slot = url.searchParams.get("slot");
         const property = url.searchParams.get("property");
         const creativeId = url.searchParams.get("creative");
-        if (!slot || !property || !creativeId) return json({ error: "slot, property, and creative query parameters are required" }, { status: 400 });
-        // Direct /click calls must satisfy the same live/slot/property eligibility
-        // as /ad. Refused clicks are neither redirected nor receipted.
+        if (!placementName(slot) || !placementName(property) || !creativeId)
+          return json({ error: "invalid slot, property, or creative" }, { status: 400 });
+        // The same context, live state and scope apply to both serving and
+        // redirects. A forged or expired creative never becomes a destination.
         const creative = listEligibleCreatives({ catalog, slot, property, context: pageContext(url), now: new Date(nowMs()) }).find((entry) => entry.id === creativeId);
         if (!creative) return json({ error: "creative is not eligible for slot/property" }, { status: 404 });
-        let receiptStatus = kv ? "recorded" : "unbound";
-        if (kv && receiptWritesOpen()) {
+
+        let receiptStatus = "not-applicable";
+        if (creative.relationship !== "house") {
+          if (!kv || !receiptWritesOpen())
+            return json({ error: "paid campaign receipt unavailable" }, { status: 503 });
           const requestId = crypto.randomUUID();
           try {
             await appendChainedReceipt(kv, {
-              type: "click",
-              slot,
-              property,
-              creativeId,
-              decisionReason: "publisher-click",
-              requestId,
+              type: "click", slot, property, creativeId,
+              decisionReason: "publisher-click", requestId,
             });
+            receiptStatus = "recorded";
           } catch (error) {
-            receiptStatus = "unavailable";
             onReceiptWriteFailure({ type: "click", slot, property, creativeId, decisionReason: "publisher-click", requestId }, error);
+            return json({ error: "paid campaign receipt unavailable" }, { status: 503 });
           }
-        } else if (kv) receiptStatus = "unavailable";
-        return new Response(null, { status: 302, headers: { location: creative.href, "x-561-receipt-status": receiptStatus } });
+        }
+        const activityStatus = recordActivity(env, {
+          event: "outbound-redirect", slot, property, creativeId,
+          relationship: creative.relationship,
+        });
+        return new Response(null, {
+          status: 302,
+          headers: {
+            location: creative.href,
+            "x-561-receipt-status": receiptStatus,
+            "x-561-activity-status": activityStatus,
+          },
+        });
       }
 
       if (url.pathname === "/receipts") {

@@ -311,3 +311,25 @@ test("bounded placement coordinates refuse malformed properties before recording
   }
   assert.equal(activity.points.length,0);
 });
+
+
+test("the original receipt HTTP route has bounded cursors and refuses absent rows",async()=>{
+  const worker=createAdServerWorker({catalog:[PAID],nowMs:()=>Date.parse("2026-10-17T12:00:00Z")});
+  const kv=createFakeKv();
+  for(let i=0;i<105;i++){
+    const response=await worker.fetch(new Request("https://ads.example"+paidAd),{AD_RECEIPTS:kv});
+    assert.equal(response.status,200);
+  }
+  const first=await(await worker.fetch(new Request("https://ads.example/receipts?since=0"),{AD_RECEIPTS:kv})).json();
+  assert.equal(first.entries.length,100);
+  assert.equal(first.nextSince,100);
+  assert.equal(first.complete,false);
+  const second=await(await worker.fetch(new Request("https://ads.example/receipts?since=100"),{AD_RECEIPTS:kv})).json();
+  assert.equal(second.entries.length,5);
+  assert.equal(second.complete,true);
+  assert.equal(second.head.seq,104);
+  assert.equal((await worker.fetch(new Request("https://ads.example/receipts?since=-1"),{AD_RECEIPTS:kv})).status,400);
+  assert.equal((await worker.fetch(new Request("https://ads.example/receipts?since=1.1"),{AD_RECEIPTS:kv})).status,400);
+  const corrupt={get:async(key,type)=>key==="chain:head"?{seq:3,id:"broken"}:null, list:kv.list};
+  assert.equal((await worker.fetch(new Request("https://ads.example/receipts?since=0"),{AD_RECEIPTS:corrupt})).status,503);
+});

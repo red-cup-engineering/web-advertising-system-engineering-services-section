@@ -53,3 +53,27 @@ test("listChain returns entries in ascending sequence order honoring since/limit
   const limited = await listChain(kv, { limit: 2 });
   assert.deepEqual(limited.map((entry) => entry.seq), [0, 1]);
 });
+
+
+test("sequence pages continue beyond the provider's default KV key listing limit", async () => {
+  const kv = createFakeKv();
+  kv.list = async () => { throw new Error("list must not be used for exact sequence pages"); };
+  for (let i = 0; i < 205; i += 1) {
+    await appendChainedReceipt(kv, { type:"impression", slot:"footer",
+      property:"koios-news", creativeId:"house" });
+  }
+  assert.deepEqual((await listChain(kv,{since:95})).map(row=>row.seq),
+    Array.from({length:100},(_,i)=>i+95));
+  assert.deepEqual((await listChain(kv,{since:195})).map(row=>row.seq),
+    Array.from({length:10},(_,i)=>i+195));
+  assert.deepEqual(await listChain(kv,{since:205}),[]);
+});
+
+test("missing persisted chain entries and malformed page requests cannot be called complete", async () => {
+  const kv=createFakeKv();
+  await appendChainedReceipt(kv, {type:"click",slot:"footer",property:"koios-news",creativeId:"house"});
+  kv.get=async key=>key==="chain:head"?{seq:2,id:"end"}:null;
+  await assert.rejects(listChain(kv,{since:0}),/missing or malformed/u);
+  await assert.rejects(listChain(kv,{since:-1}),/nonnegative/u);
+  await assert.rejects(listChain(kv,{limit:101}),/limit/u);
+});

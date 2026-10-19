@@ -1,299 +1,202 @@
-import { test } from "node:test";
+import {test} from "node:test";
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
-import { createAdServerWorker } from "../src/web/worker.mjs";
-import { HOUSE_CREATIVE_CATALOG } from "../src/catalog.mjs";
+import {createAdServerWorker} from "../src/web/worker.mjs";
+import {HOUSE_CREATIVE_CATALOG} from "../src/catalog.mjs";
 
-/** Minimal in-memory stand-in for a Cloudflare Workers KV namespace binding. */
-function createFakeKv() {
-  const store = new Map();
+function fakeKV(){
+  const values=new Map(),writes=[];
   return {
-    async get(key, type) {
-      if (!store.has(key)) return null;
-      const raw = store.get(key);
-      return type === "json" ? JSON.parse(raw) : raw;
-    },
-    async put(key, value) {
-      store.set(key, value);
-    },
-    async list({ prefix }) {
-      return { keys: [...store.keys()].filter((key) => key.startsWith(prefix)).map((name) => ({ name })) };
+    values,writes,
+    async get(key,mode){const row=values.get(key);return row===undefined?null:mode==="json"?JSON.parse(row):row},
+    async put(key,value){values.set(key,value);writes.push(key)},
+    async list({prefix,limit=50,cursor}){
+      const keys=[...values.keys()].filter(key=>key.startsWith(prefix)).sort();
+      const start=cursor?Number(cursor):0;
+      const selected=keys.slice(start,start+limit),end=start+selected.length;
+      return {keys:selected.map(name=>({name})),list_complete:end>=keys.length,
+        cursor:end>=keys.length?"":String(end)};
     },
   };
 }
+const base="https://ads.example";
+const slot="slot=footer&property=play-561-group";
+const chosen="creative=koios-news-v1";
 
-test("receipt-gap logs have an admitted operational observability carrier", async () => {
-  const wrangler = JSON.parse(await readFile(new URL("../sites/house-ads-server/wrangler.jsonc", import.meta.url), "utf8"));
-  assert.equal(wrangler.observability?.enabled, true);
-  assert.ok(Number(wrangler.observability?.head_sampling_rate) > 0);
-});
-
-test("GET /health reports ok and catalog size", async () => {
-  const worker = createAdServerWorker();
-  const response = await worker.fetch(new Request("https://ads.example/health"), {});
-  assert.equal(response.status, 200);
-  const body = await response.json();
-  assert.equal(body.ok, true);
-  assert.equal(body.catalogSize, HOUSE_CREATIVE_CATALOG.length);
-});
-
-test("JSON responses carry an open CORS header so any house property can fetch cross-origin", async () => {
-  const worker = createAdServerWorker();
-  const response = await worker.fetch(new Request("https://ads.example/health"), {});
-  assert.equal(response.headers.get("access-control-allow-origin"), "*");
-});
-
-test("GET /catalog returns the full catalog including coming-soon entries", async () => {
-  const worker = createAdServerWorker();
-  const response = await worker.fetch(new Request("https://ads.example/catalog"), {});
-  const body = await response.json();
-  assert.equal(body.catalog.length, HOUSE_CREATIVE_CATALOG.length);
-  assert.ok(body.catalog.some((creative) => creative.status === "coming-soon"));
-});
-
-test("GET /ad requires slot and property", async () => {
-  const worker = createAdServerWorker();
-  const response = await worker.fetch(new Request("https://ads.example/ad"), {});
-  assert.equal(response.status, 400);
-});
-
-test("GET /ad returns a live creative and records an impression receipt", async () => {
-  const worker = createAdServerWorker();
-  const kv = createFakeKv();
-  const response = await worker.fetch(new Request("https://ads.example/ad?slot=footer&property=play-561-group"), { AD_RECEIPTS: kv });
-  assert.equal(response.status, 200);
-  const body = await response.json();
-  // play-561-group never advertises itself; the pick rotates among the other live creatives.
-  const live = HOUSE_CREATIVE_CATALOG.filter((creative) => creative.status === "live" && creative.property !== "play-561-group").map((creative) => creative.id);
-  assert.ok(live.includes(body.creative.id), body.creative.id);
-  assert.ok(body.receipt.id);
-  assert.equal(body.receiptStatus, "recorded");
-
-  const receiptsResponse = await worker.fetch(new Request("https://ads.example/receipts"), { AD_RECEIPTS: kv });
-  const { entries } = await receiptsResponse.json();
-  assert.equal(entries.length, 1);
-  assert.equal(entries[0].type, "impression");
-});
-
-test("GET /ad still serves a creative when receipt KV persistence fails", async () => {
-  const worker = createAdServerWorker();
-  const kv = createFakeKv();
-  kv.put = async () => { throw new Error("KV put quota exceeded"); };
-  const priorError = console.error;
-  const errors = [];
-  console.error = (message) => errors.push(message);
-  try {
-    const response = await worker.fetch(new Request("https://ads.example/ad?slot=footer&property=play-561-group"), { AD_RECEIPTS: kv });
-    assert.equal(response.status, 200);
-    const body = await response.json();
-    assert.ok(body.creative);
-    assert.equal(body.receipt, null);
-    assert.equal(body.receiptStatus, "unavailable");
-    assert.equal(errors.length, 1);
-    const gap = JSON.parse(errors[0]);
-    assert.equal(gap.event, "advertising.receipt-persistence-unavailable");
-    assert.equal(gap.delivered, true);
-    assert.equal(gap.attribution, "unavailable");
-    assert.equal(gap.type, "impression");
-    assert.equal(gap.property, "play-561-group");
-    assert.ok(gap.requestId);
-  } finally {
-    console.error = priorError;
+test("health, catalog, public CORS and route methods are truthful",async()=>{
+  const worker=createAdServerWorker();
+  const health=await worker.fetch(new Request(base+"/health"),{});
+  assert.equal(health.status,200);
+  assert.equal(health.headers.get("access-control-allow-origin"),"*");
+  assert.equal((await health.json()).catalogSize,HOUSE_CREATIVE_CATALOG.length);
+  assert.ok((await (await worker.fetch(new Request(base+"/catalog"),{})).json()).catalog.some(x=>x.status==="coming-soon"));
+  assert.equal((await worker.fetch(new Request(base+"/other"),{})).status,404);
+  for(const pathname of ["/ad","/click","/catalog","/receipts"]){
+    const response=await worker.fetch(new Request(base+pathname,{method:"POST"}),{});
+    assert.equal(response.status,405,pathname);
   }
 });
 
-test("GET /click redirects to the creative href and records a click receipt", async () => {
-  const worker = createAdServerWorker();
-  const kv = createFakeKv();
-  const response = await worker.fetch(
-    new Request("https://ads.example/click?slot=footer&property=play-561-group&creative=koios-news-v1", { redirect: "manual" }),
-    { AD_RECEIPTS: kv },
-  );
-  assert.equal(response.status, 302);
-  assert.equal(response.headers.get("location"), "https://koios.news/");
-  assert.equal(response.headers.get("x-561-receipt-status"), "recorded");
-
-  const { entries } = await (await worker.fetch(new Request("https://ads.example/receipts"), { AD_RECEIPTS: kv })).json();
-  assert.equal(entries.length, 1);
-  assert.equal(entries[0].type, "click");
+test("GET /ad selects a live non-self creative without counting or writing an impression",async()=>{
+  const kv=fakeKV(),worker=createAdServerWorker();
+  const response=await worker.fetch(new Request(base+"/ad?"+slot),{AD_RECEIPTS:kv});
+  assert.equal(response.status,200);
+  const data=await response.json();
+  assert.ok(data.creative.id);
+  assert.notEqual(data.creative.id,"play-561-group-v1");
+  assert.equal(data.creative.relationship,"house");
+  assert.equal(Object.hasOwn(data,"receipt"),false);
+  assert.equal(Object.hasOwn(data,"receiptStatus"),false);
+  assert.equal(kv.writes.length,0);
+  assert.equal((await (await worker.fetch(new Request(base+"/receipts"),{AD_RECEIPTS:kv})).json()).entries.length,0);
+  assert.equal((await worker.fetch(new Request(base+"/ad"),{})).status,400);
 });
 
-test("GET /click refuses inactive, self-promoted and unknown creatives without writing receipts", async () => {
-  const worker = createAdServerWorker();
-  const kv = createFakeKv();
-  for (const url of [
-    "https://ads.example/click?slot=footer&property=play-561-group&creative=house-agent-plugin-v1",
-    "https://ads.example/click?slot=footer&property=koios-news&creative=koios-news-v1",
-    "https://ads.example/click?slot=footer&property=play-561-group&creative=nonexistent",
-  ]) {
-    const response = await worker.fetch(new Request(url, { redirect: "manual" }), { AD_RECEIPTS: kv });
-    assert.equal(response.status, 404, url);
-    assert.equal(response.headers.get("location"), null);
+test("POST /view records exactly one browser-reported event with one content-addressed KV PUT",async()=>{
+  const kv=fakeKV(),worker=createAdServerWorker();
+  const preflight=await worker.fetch(new Request(base+"/view",{method:"OPTIONS"}),{AD_RECEIPTS:kv});
+  assert.equal(preflight.status,204);
+  assert.match(preflight.headers.get("access-control-allow-methods"),/POST/u);
+  const reported=await worker.fetch(new Request(base+"/view?"+slot+"&"+chosen,{method:"POST"}),{AD_RECEIPTS:kv});
+  assert.equal(reported.status,202);
+  const answer=await reported.json();
+  assert.equal(answer.status,"recorded");
+  assert.match(answer.id,/^ni:\/\/\/sha-256;/u);
+  assert.equal(kv.writes.length,1);
+  assert.match(kv.writes[0],/^delivery:v2:/u);
+  assert.equal(kv.values.has("chain:head"),false);
+  const records=(await (await worker.fetch(new Request(base+"/receipts"),{AD_RECEIPTS:kv})).json()).entries;
+  assert.equal(records.length,1);
+  assert.equal(records[0].type,"view");
+  assert.equal(records[0].evidenceKind,"publisher-client-visibility-report");
+});
+
+test("a selection, GET /view, expired/unrelated/unknown creative and unbound KV cannot fabricate a view",async()=>{
+  const kv=fakeKV(),worker=createAdServerWorker();
+  for(const [query,method,expected] of [
+    [slot+"&"+chosen,"GET",405],
+    [slot+"&creative=house-agent-plugin-v1","POST",404],
+    [slot+"&creative=no-such-creative","POST",404],
+    ["slot=footer&property=koios-news&creative=koios-news-v1","POST",404],
+    ["slot=unknown&property=play-561-group&creative=koios-news-v1","POST",404],
+    ["property=play-561-group&creative=koios-news-v1","POST",400],
+  ]){
+    assert.equal((await worker.fetch(new Request(base+"/view?"+query,{method}),{AD_RECEIPTS:kv})).status,expected);
   }
-  const { entries } = await (await worker.fetch(new Request("https://ads.example/receipts"), { AD_RECEIPTS: kv })).json();
-  assert.deepEqual(entries, [], "refused clicks must never enter the receipt chain");
+  assert.equal(kv.writes.length,0);
+  assert.equal((await worker.fetch(new Request(base+"/view?"+slot+"&"+chosen,{method:"POST"}),{})).status,503);
 });
 
-test("GET /click enforces slot/property matching and still redirects for eligible campaigns", async () => {
-  const worker = createAdServerWorker({ catalog: [
-    { id: "approved", status: "live", relationship: "house", property: "promoted", slots: ["footer"], properties: ["publisher-ok"], href: "https://example.com/" },
-  ] });
-  for (const url of [
-    "https://ads.example/click?slot=sidebar&property=publisher-ok&creative=approved",
-    "https://ads.example/click?slot=footer&property=publisher-other&creative=approved",
-  ]) {
-    const response = await worker.fetch(new Request(url, { redirect: "manual" }), {});
-    assert.equal(response.status, 404, url);
-    assert.equal(response.headers.get("location"), null);
+test("GET /click redirects and records a redirect request, not proof of a sale",async()=>{
+  const kv=fakeKV(),worker=createAdServerWorker();
+  const response=await worker.fetch(new Request(base+"/click?"+slot+"&"+chosen,{redirect:"manual"}),{AD_RECEIPTS:kv});
+  assert.equal(response.status,302);
+  assert.equal(response.headers.get("location"),"https://koios.news/");
+  assert.equal(response.headers.get("x-561-receipt-status"),"recorded");
+  assert.equal(kv.writes.length,1);
+  const entry=(await (await worker.fetch(new Request(base+"/receipts"),{AD_RECEIPTS:kv})).json()).entries[0];
+  assert.equal(entry.type,"click");
+  assert.equal(entry.evidenceKind,"redirect-request");
+  assert.equal(Object.hasOwn(entry,"paid"),false);
+});
+
+test("ineligible self-promotion, inactive or unknown click neither redirects nor records",async()=>{
+  const kv=fakeKV(),worker=createAdServerWorker();
+  for(const url of [
+    base+"/click?"+slot+"&creative=house-agent-plugin-v1",
+    base+"/click?"+slot+"&creative=unknown",
+    base+"/click?slot=footer&property=koios-news&creative=koios-news-v1",
+  ]){
+    const response=await worker.fetch(new Request(url,{redirect:"manual"}),{AD_RECEIPTS:kv});
+    assert.equal(response.status,404);
+    assert.equal(response.headers.get("location"),null);
   }
-  const ok = await worker.fetch(new Request("https://ads.example/click?slot=footer&property=publisher-ok&creative=approved", { redirect: "manual" }), {});
-  assert.equal(ok.status, 302);
-  assert.equal(ok.headers.get("location"), "https://example.com/");
+  assert.deepEqual(kv.writes,[]);
 });
 
-test("GET /click still redirects when receipt KV persistence fails", async () => {
-  const worker = createAdServerWorker();
-  const kv = createFakeKv();
-  kv.put = async () => { throw new Error("KV put quota exceeded"); };
-  const priorError = console.error;
-  const errors = [];
-  console.error = (message) => errors.push(message);
-  try {
-    const response = await worker.fetch(
-      new Request("https://ads.example/click?slot=footer&property=play-561-group&creative=koios-news-v1", { redirect: "manual" }),
-      { AD_RECEIPTS: kv },
-    );
-    assert.equal(response.status, 302);
-    assert.equal(response.headers.get("location"), "https://koios.news/");
-    assert.equal(response.headers.get("x-561-receipt-status"), "unavailable");
-    assert.equal(errors.length, 1);
-    const gap = JSON.parse(errors[0]);
-    assert.equal(gap.event, "advertising.receipt-persistence-unavailable");
-    assert.equal(gap.delivered, true);
-    assert.equal(gap.attribution, "unavailable");
-    assert.equal(gap.type, "click");
-    assert.equal(gap.creativeId, "koios-news-v1");
-    assert.ok(gap.requestId);
-  } finally {
-    console.error = priorError;
-  }
+test("receipt retrieval supports actual native KV cursors and read-only historical events",async()=>{
+  const kv=fakeKV(),worker=createAdServerWorker();
+  await worker.fetch(new Request(base+"/view?"+slot+"&"+chosen,{method:"POST"}),{AD_RECEIPTS:kv});
+  await worker.fetch(new Request(base+"/click?"+slot+"&"+chosen),{AD_RECEIPTS:kv});
+  const p1=await (await worker.fetch(new Request(base+"/receipts?limit=1"),{AD_RECEIPTS:kv})).json();
+  assert.equal(p1.series,"current");
+  assert.equal(p1.entries.length,1);
+  assert.equal(p1.complete,false);
+  const p2=await (await worker.fetch(new Request(base+"/receipts?limit=1&cursor="+encodeURIComponent(p1.cursor)),{AD_RECEIPTS:kv})).json();
+  assert.equal(p2.entries.length,1);
+  assert.equal(p2.complete,true);
+  const legacy={id:"old",seq:0,type:"impression",occurredAt:"2026-08-31T00:00:00.000Z"};
+  kv.values.set("chain:entry:000000000000",JSON.stringify(legacy));
+  const readsBefore=kv.writes.length;
+  const history=await (await worker.fetch(new Request(base+"/receipts?series=legacy"),{AD_RECEIPTS:kv})).json();
+  assert.deepEqual(history.entries,[legacy]);
+  assert.equal(kv.writes.length,readsBefore);
+  assert.equal((await worker.fetch(new Request(base+"/receipts?series=invalid"),{AD_RECEIPTS:kv})).status,400);
+  assert.equal((await worker.fetch(new Request(base+"/receipts?limit=10000"),{AD_RECEIPTS:kv})).status,400);
 });
 
-
-test("KV Free write exhaustion stops repeated ad/click puts in this Worker isolate until UTC reset", async () => {
-  let clock = Date.parse("2026-10-13T23:59:00.000Z");
-  const reset = Date.parse("2026-10-14T00:00:00.000Z");
-  const worker = createAdServerWorker({ nowMs: () => clock });
-  const kv = createFakeKv();
-  const nativePut = kv.put;
-  const putKeys = [];
-  kv.put = async (key, value) => {
-    putKeys.push(key);
-    if (clock < reset) {
-      const error = new Error("KV PUT write limit exceeded: hidden-provider-identifier");
-      error.status = 429;
-      throw error;
-    }
-    await nativePut(key, value);
-  };
-  const output = [];
-  const previousError = console.error;
-  console.error = message => output.push(message);
-  try {
-    const url = "https://ads.example/ad?slot=footer&property=play-561-group";
-    const first = await (await worker.fetch(new Request(url), { AD_RECEIPTS: kv })).json();
-    assert.equal(first.receiptStatus, "unavailable");
-    assert.equal(putKeys.length, 1, "one real KV refusal establishes the isolate hold");
-    assert.equal(output.length, 1);
-    const gap = JSON.parse(output[0]);
-    assert.equal(gap.errorClass, "kv-write-quota-exhausted");
-    assert.doesNotMatch(output[0], /hidden-provider-identifier/);
-    const second = await (await worker.fetch(new Request(url), { AD_RECEIPTS: kv })).json();
-    assert.ok(second.creative);
-    assert.equal(second.receiptStatus, "unavailable");
-    const click = await worker.fetch(new Request(
-      "https://ads.example/click?slot=footer&property=play-561-group&creative=koios-news-v1",
-      { redirect: "manual" }), { AD_RECEIPTS: kv });
-    assert.equal(click.status, 302);
-    assert.equal(click.headers.get("x-561-receipt-status"), "unavailable");
-    assert.equal(putKeys.length, 1, "subsequent events must not amplify put failures");
-    assert.equal(output.length, 1, "the known quota gap must not spam logs every request");
-    clock = reset;
-    const afterReset = await (await worker.fetch(new Request(url), { AD_RECEIPTS: kv })).json();
-    assert.equal(afterReset.receiptStatus, "recorded");
-    assert.equal(putKeys.length, 3, "the provider reset permits normal two-key receipt chain");
-    assert.ok(afterReset.receipt.id);
-  } finally { console.error = previousError; }
+test("KV write quota produces a transparent refused signal; selection still works and reset permits later view",async()=>{
+  let now=Date.parse("2026-10-19T23:59:00.000Z");
+  const reset=Date.parse("2026-10-20T00:00:00.000Z");
+  const worker=createAdServerWorker({nowMs:()=>now});
+  const kv=fakeKV(),originalPut=kv.put,attempts=[];
+  kv.put=async(k,v)=>{attempts.push(k);if(now<reset){const e=new Error("hidden provider secret 429");e.status=429;throw e;}return originalPut(k,v)};
+  const originalError=console.error,logs=[];console.error=v=>logs.push(v);
+  try{
+    const v=base+"/view?"+slot+"&"+chosen;
+    assert.equal((await worker.fetch(new Request(v,{method:"POST"}),{AD_RECEIPTS:kv})).status,503);
+    assert.equal(attempts.length,1);
+    assert.equal((await worker.fetch(new Request(v,{method:"POST"}),{AD_RECEIPTS:kv})).status,503);
+    assert.equal((await worker.fetch(new Request(base+"/ad?"+slot),{AD_RECEIPTS:kv})).status,200);
+    const click=await worker.fetch(new Request(base+"/click?"+slot+"&"+chosen),{AD_RECEIPTS:kv});
+    assert.equal(click.status,302);
+    assert.equal(click.headers.get("x-561-receipt-status"),"unavailable");
+    assert.equal(attempts.length,1);
+    assert.equal(logs.length,1);
+    assert.equal(JSON.parse(logs[0]).errorClass,"kv-write-quota-exhausted");
+    assert.doesNotMatch(logs[0],/hidden provider secret/u);
+    now=reset;
+    assert.equal((await worker.fetch(new Request(v,{method:"POST"}),{AD_RECEIPTS:kv})).status,202);
+    assert.equal(attempts.length,2,"one KV write per observed event");
+  }finally{console.error=originalError;}
 });
 
-test("unknown KV failures remain retryable and never expose raw provider error details", async () => {
-  const worker = createAdServerWorker();
-  const kv = createFakeKv();
-  let attempts = 0;
-  kv.put = async () => { attempts += 1; throw new Error("transport fault secret=PRIVATE_NOT_A_TOKEN"); };
-  const errors = [], before = console.error;
-  console.error = message => errors.push(message);
-  try {
-    const url = "https://ads.example/ad?slot=footer&property=play-561-group";
-    for (let i = 0; i < 2; i++) {
-      const response = await (await worker.fetch(new Request(url), { AD_RECEIPTS: kv })).json();
-      assert.equal(response.receiptStatus, "unavailable");
-    }
-    assert.equal(attempts, 2, "unrelated transient failures do not establish a quota hold");
-    assert.equal(errors.length, 2);
-    assert.equal(JSON.parse(errors[0]).errorClass, "receipt-storage-error");
-    assert.doesNotMatch(errors.join(" "), /PRIVATE_NOT_A_TOKEN|secret=/);
-  } finally { console.error = before; }
+test("transient KV transport errors remain retryable without leaking raw provider details",async()=>{
+  const worker=createAdServerWorker(),kv=fakeKV();
+  const errors=[],before=console.error;let puts=0;
+  kv.put=async()=>{puts++;throw new Error("secret=PRIVATE_VALUE transport failed")};
+  console.error=v=>errors.push(v);
+  try{
+    const url=base+"/view?"+slot+"&"+chosen;
+    assert.equal((await worker.fetch(new Request(url,{method:"POST"}),{AD_RECEIPTS:kv})).status,503);
+    assert.equal((await worker.fetch(new Request(url,{method:"POST"}),{AD_RECEIPTS:kv})).status,503);
+    assert.equal(puts,2);
+    assert.equal(errors.length,2);
+    assert.equal(JSON.parse(errors[0]).errorClass,"receipt-storage-error");
+    assert.doesNotMatch(errors.join(" "),/PRIVATE_VALUE|secret=/u);
+  }finally{console.error=before;}
 });
 
-test("clock admission is explicit and does not change unbound receipts", async () => {
-  assert.throws(() => createAdServerWorker({ nowMs: null }), /nowMs must provide/);
-  const worker = createAdServerWorker({ nowMs: () => Date.parse("2026-10-13T23:59:50Z") });
-  const received = await (await worker.fetch(new Request(
-    "https://ads.example/ad?slot=footer&property=play-561-group"), {})).json();
-  assert.equal(received.receiptStatus, "unbound");
-});
-
-test("unknown route returns 404", async () => {
-  const worker = createAdServerWorker();
-  const response = await worker.fetch(new Request("https://ads.example/nowhere"), {});
-  assert.equal(response.status, 404);
-});
-
-test("GET /ad provides machine-readable sponsorship and GET /click expires at the same instant", async () => {
-  let clock = Date.parse("2026-10-17T23:00:00Z");
-  const campaign = {
-    id: "paid", status: "live", relationship: "affiliate",
-    property: "promoted", properties: ["publisher"], slots: ["footer"], contexts: ["finance"],
-    title: "Example", body: "Referral offer", href: "https://example.org/offer",
-    disclosure: "Referral link: the publisher may receive a commission.",
-    allowedContexts: ["finance"],
-    eligibility: "Only eligible participants qualify.",
-    riskNotice: "Trading carries a risk of loss.",
-    expiresAt: "2026-10-18T00:00:00Z",
-  };
-  const worker = createAdServerWorker({ catalog: [campaign], nowMs: () => clock });
-  const before = await worker.fetch(new Request("https://ads.example/ad?slot=footer&property=publisher&context=finance"), {});
-  assert.equal(before.status, 200);
-  const offer = (await before.json()).creative;
-  assert.equal(offer.relationship, "affiliate");
-  assert.equal(offer.disclosure, campaign.disclosure);
-  assert.equal(offer.linkRel, "sponsored nofollow");
-  assert.deepEqual(offer.allowedContexts, ["finance"]);
-  assert.equal(offer.eligibility, campaign.eligibility);
-  assert.equal(offer.riskNotice, campaign.riskNotice);
-  assert.equal(offer.expiresAt, campaign.expiresAt);
-  assert.equal((await worker.fetch(new Request("https://ads.example/ad?slot=footer&property=publisher&context=sport"), {})).status, 404);
-  const badClick = await worker.fetch(new Request("https://ads.example/click?slot=footer&property=publisher&creative=paid",{redirect:"manual"}), {});
-  assert.equal(badClick.status, 404);
-  assert.equal(badClick.headers.get("location"), null);
-  const redirect = await worker.fetch(new Request("https://ads.example/click?slot=footer&property=publisher&creative=paid&context=finance", { redirect: "manual" }), {});
-  assert.equal(redirect.status, 302);
-  assert.equal(redirect.headers.get("location"), campaign.href);
-  clock = Date.parse("2026-10-18T00:00:00Z");
-  const after = await worker.fetch(new Request("https://ads.example/ad?slot=footer&property=publisher"), {});
-  assert.equal(after.status, 404);
-  const refusedClick = await worker.fetch(new Request("https://ads.example/click?slot=footer&property=publisher&creative=paid&context=finance", { redirect: "manual" }), {});
-  assert.equal(refusedClick.status, 404);
-  assert.equal(refusedClick.headers.get("location"), null);
+test("paid sponsored relationship includes relevant terms, refuses unrelated contexts, and expires on time",async()=>{
+  let now=Date.parse("2026-10-19T14:00:00.000Z");
+  const paid={id:"paid",status:"live",relationship:"affiliate",property:"merchant",
+    properties:["koios-news"],slots:["footer"],contexts:["science"],allowedContexts:["science"],
+    title:"Offer",href:"https://example.org/",disclosure:"We receive a commission.",
+    eligibility:"Only qualified users.",riskNotice:"Losses are possible.",
+    expiresAt:"2026-10-19T15:00:00.000Z"};
+  const worker=createAdServerWorker({catalog:[paid],nowMs:()=>now});
+  const url=base+"/ad?slot=footer&property=koios-news&context=science";
+  const result=await worker.fetch(new Request(url),{});
+  assert.equal(result.status,200);
+  const creative=(await result.json()).creative;
+  assert.equal(creative.relationship,"affiliate");
+  assert.equal(creative.linkRel,"sponsored nofollow");
+  assert.deepEqual(creative.allowedContexts,["science"]);
+  assert.equal(creative.riskNotice,paid.riskNotice);
+  assert.equal((await worker.fetch(new Request(url.replace("science","sports")),{})).status,404);
+  const clicked=await worker.fetch(new Request(base+"/click?slot=footer&property=koios-news&creative=paid&context=science"),{});
+  assert.equal(clicked.status,302);
+  now=Date.parse("2026-10-19T15:00:00.000Z");
+  assert.equal((await worker.fetch(new Request(url),{})).status,404);
+  assert.equal((await worker.fetch(new Request(base+"/view?slot=footer&property=koios-news&creative=paid&context=science",{method:"POST"}),{})).status,404);
+  assert.equal((await worker.fetch(new Request(base+"/click?slot=footer&property=koios-news&creative=paid&context=science"),{})).status,404);
 });

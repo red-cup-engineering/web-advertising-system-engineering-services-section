@@ -53,7 +53,7 @@ function nextUtcQuotaReset(nowMs) {
 function reportReceiptGap({ type, slot, property, creativeId, decisionReason, requestId, error }) {
   console.error(JSON.stringify({
     event: "advertising.receipt-persistence-unavailable",
-    delivered: true,
+    delivered: false,
     attribution: "unavailable",
     type,
     slot,
@@ -208,9 +208,18 @@ export function createAdServerWorker({ catalog = HOUSE_CREATIVE_CATALOG, nowMs =
 
       if (url.pathname === "/receipts") {
         if (!kv) return json({ error: "receipt chain not bound" }, { status: 503 });
-        const since = Number(url.searchParams.get("since") ?? "0");
-        const [entries, head] = await Promise.all([listChain(kv, { since }), chainHead(kv)]);
-        return json({ head, entries });
+        const raw = url.searchParams.get("since") ?? "0";
+        if (!/^(0|[1-9]\d*)$/u.test(raw) || !Number.isSafeInteger(Number(raw)))
+          return json({ error: "invalid receipt cursor" }, { status: 400 });
+        const since = Number(raw);
+        try {
+          const head = await chainHead(kv);
+          const entries = await listChain(kv, { since, head });
+          const nextSince = since + entries.length;
+          return json({ head, entries, nextSince, complete: !head || nextSince > head.seq });
+        } catch {
+          return json({ error: "receipt chain incomplete" }, { status: 503 });
+        }
       }
 
       return json({ error: "not found" }, { status: 404 });

@@ -41,17 +41,26 @@ export async function appendChainedReceipt(kv, input) {
  * @param {number} [options.limit] Maximum entries to return.
  * @returns {Promise<object[]>} Chain entries in ascending sequence order.
  */
-export async function listChain(kv, { since = 0, limit = 100 } = {}) {
-  const { keys } = await kv.list({ prefix: "chain:entry:" });
-  const selected = keys
-    .filter((key) => Number(key.name.slice("chain:entry:".length)) >= since)
-    .slice(0, limit);
+export async function listChain(kv, { since = 0, limit = 100, head } = {}) {
+  if (!Number.isSafeInteger(since) || since < 0)
+    throw new TypeError("receipt since must be a nonnegative safe integer");
+  if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100)
+    throw new RangeError("receipt page limit must be within 1..100");
+  // Fixed-width sequence keys are already an index. Do not rely on one
+  // truncated KV list page: after 1,000 keys it stranded every newer receipt.
+  const recordedHead = head === undefined ? await chainHead(kv) : head;
+  if (!recordedHead) return [];
+  if (!Number.isSafeInteger(recordedHead.seq) || recordedHead.seq < 0)
+    throw new Error("receipt chain head is malformed");
   const entries = [];
-  for (const key of selected) {
-    const value = await kv.get(key.name, "json");
-    if (value) entries.push(value);
+  const last = Math.min(recordedHead.seq, since + limit - 1);
+  for (let seq = since; seq <= last; seq += 1) {
+    const entry = await kv.get(entryKey(seq), "json");
+    if (!entry || entry.seq !== seq)
+      throw new Error("receipt chain has a missing or malformed entry");
+    entries.push(entry);
   }
-  return entries.sort((a, b) => a.seq - b.seq);
+  return entries;
 }
 
 /**

@@ -103,10 +103,12 @@ export function createAdServerWorker({ catalog = HOUSE_CREATIVE_CATALOG, nowMs =
       }
 
       if (url.pathname === "/catalog") {
+        if (request.method !== "GET") return json({error:"method not allowed"},{status:405});
         return json({ catalog });
       }
 
       if (url.pathname === "/ad") {
+        if (request.method !== "GET") return json({error:"method not allowed"},{status:405});
         const slot = url.searchParams.get("slot");
         const property = url.searchParams.get("property");
         if (!slot || !property) return json({ error: "slot and property query parameters are required" }, { status: 400 });
@@ -144,6 +146,7 @@ export function createAdServerWorker({ catalog = HOUSE_CREATIVE_CATALOG, nowMs =
       }
 
       if (url.pathname === "/click") {
+        if (request.method !== "GET") return json({error:"method not allowed"},{status:405});
         const slot = url.searchParams.get("slot");
         const property = url.searchParams.get("property");
         const creativeId = url.searchParams.get("creative");
@@ -175,6 +178,7 @@ export function createAdServerWorker({ catalog = HOUSE_CREATIVE_CATALOG, nowMs =
       }
 
       if (url.pathname === "/receipts") {
+        if (request.method !== "GET") return json({error:"method not allowed"},{status:405});
         if (!kv) return json({ error: "receipt chain not bound" }, { status: 503 });
         const series=url.searchParams.get("series")??"current";
         const cursor=url.searchParams.get("cursor")??undefined;

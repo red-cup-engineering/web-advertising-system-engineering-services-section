@@ -25,13 +25,20 @@ record and contextual preference added.
 Each creative declares `relationship` as `house`, `sponsored`, or
 `affiliate`. House creatives identify the Group's own properties and offers.
 A paid or affiliate creative must also declare its truthful `disclosure`, an
-absolute HTTPS destination and a future `expiresAt` timestamp. All dated
-creatives stop being eligible **at** the expiry instant, on both `GET /ad` and
-`GET /click`, regardless of a stale catalog `status: "live"`.
+absolute HTTPS destination, a future `expiresAt` timestamp, and at least one
+`allowedContexts` page topic. An affiliate creative additionally requires
+`eligibility` and `riskNotice` text or the engine refuses to serve or redirect
+it. Page context must match a declared topic on both `GET /ad` and `GET /click`;
+for paid campaigns the `allowedContexts` are also the contextual selection
+preference. All dated creatives stop being eligible **at** the expiry instant,
+regardless of a stale catalog `status: "live"`.
 
 `GET /ad` returns `creative.relationship`, `creative.disclosure`, and
-`creative.linkRel` (the last two are null for house creatives). Publisher
-renderers must display a non-house disclosure next to the offer, and put the
+`creative.linkRel` (the last two are null for house creatives), as well as
+`allowedContexts`, `eligibility`, `riskNotice`, and `expiresAt` for
+third-party campaigns. Publisher renderers must display a non-house disclosure
+next to the offer, present affiliate terms/risk, retain page context in their
+redirect, and put the
 returned `linkRel` on its clickable link. These fields carry the required
 material-connection information to humans and agents; merely obtaining this
 JSON **does not** constitute disclosure on a published page.

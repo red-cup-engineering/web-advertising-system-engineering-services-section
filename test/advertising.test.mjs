@@ -71,7 +71,7 @@ test("campaign expiry uses the supplied clock for both house and paid creatives"
 });
 
 test("third-party eligibility refuses missing disclosure, expiry, unsafe redirect and untyped relations", () => {
-  const base = { id: "campaign", status: "live", relationship: "affiliate", slots: ["*"], properties: ["*"], property: "merchant", expiresAt: "2026-11-01T00:00:00Z", disclosure: "We may earn a referral commission.", allowedContexts: ["finance"], href: "https://example.org/offer" };
+  const base = { id: "campaign", status: "live", relationship: "affiliate", slots: ["*"], properties: ["*"], property: "merchant", expiresAt: "2026-11-01T00:00:00Z", disclosure: "We may earn a referral commission.", eligibility: "Eligible participants only.", riskNotice: "Capital may be lost.", allowedContexts: ["finance"], href: "https://example.org/offer" };
   const now = new Date("2026-10-18T00:00:00Z");
   const eligible = creative => listEligibleCreatives({ catalog: [creative], slot: "footer", property: "publisher", context: ["finance"], now });
   assert.equal(eligible(base).length, 1);
@@ -85,6 +85,10 @@ test("third-party eligibility refuses missing disclosure, expiry, unsafe redirec
     { ...base, relationship: "unknown" },
     { ...base, allowedContexts: [] },
     { ...base, allowedContexts: undefined },
+    { ...base, eligibility: undefined },
+    { ...base, eligibility: "" },
+    { ...base, riskNotice: "" },
+    { ...base, riskNotice: undefined },
     { ...base, href: "https://user:pass@example.org/offer" },
   ]) assert.deepEqual(eligible(changed), []);
   assert.throws(() => listEligibleCreatives({ catalog: [base], slot: "footer", property: "publisher", now: new Date("bad") }), /valid clock/);
@@ -99,4 +103,7 @@ test("third-party contextual admission fails closed while house placement still 
   assert.deepEqual(listEligibleCreatives({catalog:[house,paid],slot:"footer",property:"publisher",context:["science"],now}).map(x=>x.id),["h","p"]);
   assert.equal(selectCreative({catalog:[paid],slot:"footer",property:"publisher",context:["sports"],now}),null);
   assert.equal(selectCreative({catalog:[paid],slot:"footer",property:"publisher",context:["science"],now}).creative.id,"p");
+  // A paid campaign's admission contexts are its selection contexts too; an
+  // unrelated broadly eligible house ad cannot hide a valid matched placement.
+  assert.equal(selectCreative({catalog:[house,paid],slot:"footer",property:"publisher",context:["science"],now}).creative.id,"p");
 });

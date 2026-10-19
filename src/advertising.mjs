@@ -39,6 +39,12 @@ export function listEligibleCreatives({ catalog, slot, property, context = [], n
       // preference for commercial placements.
       if (!Array.isArray(creative.allowedContexts) ||
           !creative.allowedContexts.some(v => typeof v === "string" && wanted.has(v))) return false;
+      // Publisher-rendered referral ads require both offer qualifications and
+      // material risk information. Do not record an impression for an offer
+      // the receiving publisher must correctly refuse to display.
+      if (creative.relationship === "affiliate" &&
+          ["eligibility", "riskNotice"].some(k =>
+            typeof creative[k] !== "string" || !creative[k].trim())) return false;
     }
     if (creative.property === property) return false;
     if (!Array.isArray(creative.slots) || !Array.isArray(creative.properties)) return false;
@@ -67,7 +73,9 @@ export function selectCreative({ catalog, slot, property, context = [], now = ne
   // desk, a game's genre), and creatives that declare that context are
   // preferred; with none matching, every eligible creative rotates.
   const wanted = pageContexts(context);
-  const matching = wanted.size === 0 ? [] : all.filter((creative) => (creative.contexts ?? []).some((value) => wanted.has(value)));
+  const matching = wanted.size === 0 ? [] : all.filter((creative) =>
+    (creative.relationship === "house" ? creative.contexts ?? [] : creative.allowedContexts ?? [])
+      .some((value) => wanted.has(value)));
   const eligible = matching.length > 0 ? matching : all;
   const dayStamp = now.toISOString().slice(0, 10);
   const index = Math.abs(hashSeed(`${slot}\u0000${property}\u0000${dayStamp}`) | 0) % eligible.length;

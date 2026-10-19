@@ -9,13 +9,32 @@ import { hashSeed } from "@red-cup-engineering/computer-data-engineering-service
  * @param {string} property Requesting property key (never advertised to itself).
  * @returns {import("./catalog.mjs").AdCreative[]} Eligible creatives, in catalog order.
  */
-export function listEligibleCreatives({ catalog, slot, property }) {
+export function listEligibleCreatives({ catalog, slot, property, now = new Date() }) {
   if (!Array.isArray(catalog)) throw new TypeError("listEligibleCreatives requires a catalog array");
   if (!slot) throw new TypeError("listEligibleCreatives requires a slot");
   if (!property) throw new TypeError("listEligibleCreatives requires a property");
+  if (!(now instanceof Date) || !Number.isFinite(now.getTime())) {
+    throw new TypeError("listEligibleCreatives requires a valid clock");
+  }
   return catalog.filter((creative) => {
-    if (creative.status !== "live") return false;
+    if (!creative || creative.status !== "live") return false;
+    if (!["house", "sponsored", "affiliate"].includes(creative.relationship)) return false;
+    // An undocumented or expired offer cannot be advertised or clicked, even if
+    // an operator accidentally leaves its catalog status at "live".
+    if (creative.expiresAt !== undefined) {
+      if (typeof creative.expiresAt !== "string" ||
+          !Number.isFinite(Date.parse(creative.expiresAt)) ||
+          Date.parse(creative.expiresAt) <= now.getTime()) return false;
+    }
+    if (creative.relationship !== "house") {
+      if (typeof creative.expiresAt !== "string" ||
+          typeof creative.disclosure !== "string" || !creative.disclosure.trim()) return false;
+      try {
+        if (new URL(creative.href).protocol !== "https:") return false;
+      } catch { return false; }
+    }
     if (creative.property === property) return false;
+    if (!Array.isArray(creative.slots) || !Array.isArray(creative.properties)) return false;
     const slotOk = creative.slots.includes("*") || creative.slots.includes(slot);
     const propertyOk = creative.properties.includes("*") || creative.properties.includes(property);
     return slotOk && propertyOk;
@@ -35,7 +54,7 @@ export function listEligibleCreatives({ catalog, slot, property }) {
  * @returns {?{creative: import("./catalog.mjs").AdCreative, decision: {slot: string, property: string, consideredIds: string[], selectedId: string, reason: string}}}
  */
 export function selectCreative({ catalog, slot, property, context = [], now = new Date() }) {
-  const all = listEligibleCreatives({ catalog, slot, property });
+  const all = listEligibleCreatives({ catalog, slot, property, now });
   if (all.length === 0) return null;
   // Contextual, never behavioral: the page says what it is about (an article's
   // desk, a game's genre), and creatives that declare that context are

@@ -139,12 +139,18 @@ export function createAdServerWorker({ catalog = HOUSE_CREATIVE_CATALOG, nowMs =
         const property = url.searchParams.get("property");
         if (!placementName(slot) || !placementName(property)) return json({error:"invalid slot or property"},{status:400});
         const context = pageContext(url);
-        const picked = selectCreative({ catalog, slot, property, context, now: new Date(nowMs()) });
-        if (!picked) return json({ error: "no eligible creative for slot/property" }, { status: 404 });
-        // A paid campaign requires a functioning receipt sink, but selection
-        // itself is never a view or a charged impression.
-        if (picked.creative.relationship !== "house" && (!kv || !receiptWritesOpen()))
-          return json({error:"paid campaign delivery unavailable"},{status:503});
+        // Delivery capacity is part of the selectable inventory. Never lose
+        // eligible first-party promotions solely because paid-event storage
+        // cannot receive a separate, durable sponsored campaign.
+        const paidAvailable = Boolean(kv && receiptWritesOpen());
+        const availableCatalog = paidAvailable ? catalog : catalog.filter(creative => creative?.relationship === "house");
+        const picked = selectCreative({ catalog: availableCatalog, slot, property, context, now: new Date(nowMs()) });
+        if (!picked) {
+          // Distinguish paid-only storage refusal from genuine lack of stock.
+          if (!paidAvailable && selectCreative({ catalog, slot, property, context, now: new Date(nowMs()) }))
+            return json({error:"paid campaign delivery unavailable"},{status:503});
+          return json({ error: "no eligible creative for slot/property" }, { status: 404 });
+        }
         const activityStatus=recordActivity(env,{event:"creative-response",slot,property,
           creativeId:picked.creative.id,relationship:picked.creative.relationship});
         return json({ creative: publicCreative(picked.creative), activityStatus });

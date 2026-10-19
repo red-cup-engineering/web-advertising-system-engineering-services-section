@@ -62,6 +62,11 @@ returned `linkRel` on its clickable link. These fields carry the required
 material-connection information to humans and agents; merely obtaining this
 JSON **does not** constitute disclosure on a published page.
 
+When durable paid-event storage is absent or under provider quota hold,
+the serving engine continues selecting eligible house promotions through
+the **same original contextual selector**. It refuses paid-only inventory with
+503 and reports genuine no-fill with 404; selection never invents a receipt.
+
 The current source catalog contains only house creatives. Do not activate a
 third-party campaign until the receiving property renders those fields and
 the actual offer, terms, rights, merchant attribution and expiry are qualified.

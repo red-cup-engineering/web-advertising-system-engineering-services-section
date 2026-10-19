@@ -247,3 +247,43 @@ test("expiry refuses paid selection, view and redirects at the exact boundary",a
   assert.equal((await instance.fetch(new Request(base+paidView,{method:"POST"}),{AD_RECEIPTS:kv})).status,404);
   assert.equal((await instance.fetch(new Request(base+paidClick),{AD_RECEIPTS:kv})).status,404);
 });
+
+test("first-party promotions remain operable without a paid-event sink",async()=>{
+  const instance=worker([house,paid]),activity=fakeActivity();
+  const fallback=await instance.fetch(new Request(base+paidQuery),{AD_ACTIVITY:activity});
+  assert.equal(fallback.status,200);
+  const body=await fallback.json();
+  assert.equal(body.creative.id,"our-news");
+  assert.equal(body.activityStatus,"submitted");
+  assert.deepEqual(activity.points[0].blobs,["creative-response","footer","our-news","house"]);
+  const kv=fakeKV();
+  const paidAnswer=await instance.fetch(new Request(base+paidQuery),{AD_RECEIPTS:kv});
+  assert.equal(paidAnswer.status,200);
+  assert.equal((await paidAnswer.json()).creative.id,"sponsor");
+  assert.deepEqual(kv.writes,[],"creative selection is not an impression");
+});
+
+test("paid-only storage failure remains 503 while unrelated inventory remains 404",async()=>{
+  const instance=worker([paid]);
+  assert.equal((await instance.fetch(new Request(base+paidQuery),{})).status,503);
+  assert.equal((await instance.fetch(new Request(base+paidQuery.replace("science","sports")),{})).status,404);
+});
+
+test("quota-held paid campaigns yield to house promotions and recover at UTC reset",async()=>{
+  let now=Date.parse("2026-10-19T23:59:30Z");
+  const reset=Date.parse("2026-10-20T00:00:00Z");
+  const instance=worker([house,paid],()=>now),kv=fakeKV(),native=kv.put;
+  kv.put=async()=>{const error=Error("KV quota exceeded");error.status=429;throw error;};
+  const prior=console.error,errors=[];console.error=x=>errors.push(x);
+  try {
+    assert.equal((await instance.fetch(new Request(base+paidView,{method:"POST"}),{AD_RECEIPTS:kv})).status,503);
+    const fallback=await instance.fetch(new Request(base+paidQuery),{AD_RECEIPTS:kv});
+    assert.equal(fallback.status,200);
+    assert.equal((await fallback.json()).creative.id,"our-news");
+    assert.equal(errors.length,1);
+    now=reset;kv.put=native;
+    const revived=await instance.fetch(new Request(base+paidQuery),{AD_RECEIPTS:kv});
+    assert.equal(revived.status,200);
+    assert.equal((await revived.json()).creative.id,"sponsor");
+  } finally {console.error=prior;}
+});

@@ -22,7 +22,8 @@
       "title": "koios.news",
       "body": "Independent news, sourced and edited by the house's own editorial pipeline.",
       "href": "https://koios.news/",
-      "imageAlt": null
+      "imageAlt": null,
+      "relationship": "house"
     },
     {
       "id": "play-561-group-v1",
@@ -46,7 +47,8 @@
       "title": "play.561.group",
       "body": "Free browser games from the house — solitaire, weiqi, and more.",
       "href": "https://play.561.group/",
-      "imageAlt": null
+      "imageAlt": null,
+      "relationship": "house"
     },
     {
       "id": "agent-operators-handbook-v2",
@@ -73,7 +75,8 @@
       "title": "The Agent Operator's Handbook",
       "body": "A field guide to dispatching, steering and recovering several AI coding agents at once. Ebook, $29.",
       "href": "https://shop.561.group/goods/the-agent-operators-handbook",
-      "imageAlt": null
+      "imageAlt": null,
+      "relationship": "house"
     },
     {
       "id": "the-x402-economy-v1",
@@ -101,7 +104,8 @@
       "title": "The x402 Economy",
       "body": "How the web's unused payment code became a way for software to pay, and what it has earned so far. A sourced ebook, $9.",
       "href": "https://shop.561.group/goods/the-x402-economy",
-      "imageAlt": null
+      "imageAlt": null,
+      "relationship": "house"
     },
     {
       "id": "project-management-course-by-course-v1",
@@ -129,7 +133,8 @@
       "title": "Project Management, Course by Course",
       "body": "A study companion to Google’s Project Management Certificate: one chapter per course, self-checks with answers. Independent. $9.",
       "href": "https://shop.561.group/goods/project-management-course-by-course",
-      "imageAlt": null
+      "imageAlt": null,
+      "relationship": "house"
     },
     {
       "id": "the-capm-domain-by-domain-v1",
@@ -158,7 +163,8 @@
       "title": "The CAPM, Domain by Domain",
       "body": "A study companion to PMI’s CAPM exam, task by task, with a 40-question practice exam. Independent of PMI. $12.",
       "href": "https://shop.561.group/goods/the-capm-domain-by-domain",
-      "imageAlt": null
+      "imageAlt": null,
+      "relationship": "house"
     },
     {
       "id": "data-analytics-course-by-course-v1",
@@ -186,7 +192,8 @@
       "title": "Data Analytics, Course by Course",
       "body": "A study companion to Google’s Data Analytics Certificate: spreadsheets, SQL, Tableau and Python, with tested code. Independent. $9.",
       "href": "https://shop.561.group/goods/data-analytics-course-by-course",
-      "imageAlt": null
+      "imageAlt": null,
+      "relationship": "house"
     },
     {
       "id": "ux-design-course-by-course-v1",
@@ -214,7 +221,8 @@
       "title": "UX Design, Course by Course",
       "body": "A study companion to Google’s UX Design Certificate: the design process from its sources, accessibility throughout. Independent. $9.",
       "href": "https://shop.561.group/goods/ux-design-course-by-course",
-      "imageAlt": null
+      "imageAlt": null,
+      "relationship": "house"
     },
     {
       "id": "business-management-course-by-course-v1",
@@ -241,7 +249,8 @@
       "title": "Business Management, Course by Course",
       "body": "A study companion to Cornell’s Business Management Essentials certificate: finance, marketing, strategy, people. Independent. $12.",
       "href": "https://shop.561.group/goods/business-management-course-by-course",
-      "imageAlt": null
+      "imageAlt": null,
+      "relationship": "house"
     },
     {
       "id": "business-strategy-course-by-course-v1",
@@ -269,7 +278,8 @@
       "title": "Business Strategy, Course by Course",
       "body": "A study companion to Cornell’s Business Strategy certificate: value, disruption, alliances, game theory, platforms. Independent. $12.",
       "href": "https://shop.561.group/goods/business-strategy-course-by-course",
-      "imageAlt": null
+      "imageAlt": null,
+      "relationship": "house"
     },
     {
       "id": "house-agent-plugin-v1",
@@ -290,7 +300,8 @@
       "title": "The house agent plugin",
       "body": "Coming soon: the house's own Claude Code plugin.",
       "href": "https://561.group/plugin",
-      "imageAlt": null
+      "imageAlt": null,
+      "relationship": "house"
     },
     {
       "id": "ice-out-v1",
@@ -318,7 +329,8 @@
       "title": "Ice Out",
       "body": "A slow-burn romance on the shore of Lake Superior: one winter, one lift bridge, eleven years of saying nothing. A novel. $3.99.",
       "href": "https://shop.561.group/goods/ice-out",
-      "imageAlt": null
+      "imageAlt": null,
+      "relationship": "house"
     }
   ]
 }

@@ -1,25 +1,12 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { buildDeliveryReceipt, canonicalJson, sha256Ni } from "../src/receipts.mjs";
+import { buildDeliveryReceipt, canonicalJson } from "../src/receipts.mjs";
 
 test("canonicalJson sorts keys regardless of insertion order", () => {
   const first = canonicalJson({ b: 1, a: 2 });
   const second = canonicalJson({ a: 2, b: 1 });
   assert.equal(first, second);
   assert.equal(first, '{"a":2,"b":1}');
-});
-
-test("sha256Ni is a deterministic RFC 6920 ni:// URI", async () => {
-  const first = await sha256Ni("hello");
-  const second = await sha256Ni("hello");
-  assert.equal(first, second);
-  assert.match(first, /^ni:\/\/\/sha-256;[A-Za-z0-9_-]{43}$/u);
-});
-
-test("sha256Ni differs for different input", async () => {
-  const first = await sha256Ni("hello");
-  const second = await sha256Ni("goodbye");
-  assert.notEqual(first, second);
 });
 
 test("buildDeliveryReceipt validates required fields and type", async () => {
@@ -41,7 +28,7 @@ test("buildDeliveryReceipt is content-addressed and chains prevHash", async () =
     creativeId: "koios-news-v1",
     occurredAt: "2026-08-31T00:00:00.000Z",
   });
-  assert.match(first.id, /^ni:\/\/\/sha-256;[A-Za-z0-9_-]{43}$/u);
+  assert.equal(first.id, "ni:///sha-256;YidFTmTCuxoLNhllulqzGIsSpM6XRWrjJzFfi7JIoFM");
   assert.equal(first.prevHash, null);
 
   const second = await buildDeliveryReceipt({

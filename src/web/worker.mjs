@@ -17,8 +17,14 @@ function json(body, init = {}) {
 
 /** Strip internal catalog fields (status, slots, properties, tags) from a served creative. */
 function publicCreative(creative) {
-  const { id, title, body, href, imageAlt } = creative;
-  return { id, title, body, href, imageAlt: imageAlt ?? null };
+  const { id, title, body, href, imageAlt, relationship } = creative;
+  return {
+    id, title, body, href, imageAlt: imageAlt ?? null, relationship,
+    // Renderers must present disclosure beside non-house calls to action;
+    // search engines and agent clients must also receive a paid-link relation.
+    disclosure: relationship === "house" ? null : creative.disclosure,
+    linkRel: relationship === "house" ? null : "sponsored nofollow",
+  };
 }
 
 /** Cloudflare's free Workers KV PUT limit resets daily at 00:00 UTC.
@@ -92,7 +98,7 @@ export function createAdServerWorker({ catalog = HOUSE_CREATIVE_CATALOG, nowMs =
         const property = url.searchParams.get("property");
         if (!slot || !property) return json({ error: "slot and property query parameters are required" }, { status: 400 });
         const context = (url.searchParams.get("context") ?? "").split(",").map((value) => value.trim()).filter(Boolean).slice(0, 8);
-        const picked = selectCreative({ catalog, slot, property, context });
+        const picked = selectCreative({ catalog, slot, property, context, now: new Date(nowMs()) });
         if (!picked) return json({ error: "no eligible creative for slot/property" }, { status: 404 });
         let receipt = null;
         let receiptStatus = kv ? "recorded" : "unbound";
@@ -126,7 +132,7 @@ export function createAdServerWorker({ catalog = HOUSE_CREATIVE_CATALOG, nowMs =
         if (!slot || !property || !creativeId) return json({ error: "slot, property, and creative query parameters are required" }, { status: 400 });
         // Direct /click calls must satisfy the same live/slot/property eligibility
         // as /ad. Refused clicks are neither redirected nor receipted.
-        const creative = listEligibleCreatives({ catalog, slot, property }).find((entry) => entry.id === creativeId);
+        const creative = listEligibleCreatives({ catalog, slot, property, now: new Date(nowMs()) }).find((entry) => entry.id === creativeId);
         if (!creative) return json({ error: "creative is not eligible for slot/property" }, { status: 404 });
         let receiptStatus = kv ? "recorded" : "unbound";
         if (kv && receiptWritesOpen()) {

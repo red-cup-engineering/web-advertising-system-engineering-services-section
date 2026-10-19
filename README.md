@@ -19,3 +19,33 @@ The house advertising engine, `@red-cup-engineering/web-advertising-system-engin
 The engine was deleted from the tree on 2026-09-19 (f773c353e79) while its Worker kept serving.
 It was revived on 2026-09-27 from that commit's parent, with the catalog moved from code into its
 record and contextual preference added.
+
+## Campaign admission and publisher rendering
+
+Each creative declares `relationship` as `house`, `sponsored`, or
+`affiliate`. House creatives identify the Group's own properties and offers.
+A paid or affiliate creative must also declare its truthful `disclosure`, an
+absolute HTTPS destination and a future `expiresAt` timestamp. All dated
+creatives stop being eligible **at** the expiry instant, on both `GET /ad` and
+`GET /click`, regardless of a stale catalog `status: "live"`.
+
+`GET /ad` returns `creative.relationship`, `creative.disclosure`, and
+`creative.linkRel` (the last two are null for house creatives). Publisher
+renderers must display a non-house disclosure next to the offer, and put the
+returned `linkRel` on its clickable link. These fields carry the required
+material-connection information to humans and agents; merely obtaining this
+JSON **does not** constitute disclosure on a published page.
+
+The current source catalog contains only house creatives. Do not activate a
+third-party campaign until the receiving property renders those fields and
+the actual offer, terms, rights, merchant attribution and expiry are qualified.
+Do not treat an ad API response as a verified human impression or a redirect
+request as an independently received purchase. Receipt KV write failure means
+that the delivered response has **no durable ad attribution**; never synthesize
+a conversion count from it.
+
+The original FNV rotation seed now comes from Computer Data; JSON identity
+comes from the house JSON service; RFC 6920 NI hashing comes from the URI
+service. Historic ad receipt byte identity is pinned by a golden fixture, not
+recomputed as a SignCell/CBOR semantic identity. Ad slots, campaign admission,
+redirects and merchant disclosures stay downstream in this advertising engine.

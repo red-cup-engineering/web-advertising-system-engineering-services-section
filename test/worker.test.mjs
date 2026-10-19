@@ -136,7 +136,7 @@ test("GET /click refuses inactive, self-promoted and unknown creatives without w
 
 test("GET /click enforces slot/property matching and still redirects for eligible campaigns", async () => {
   const worker = createAdServerWorker({ catalog: [
-    { id: "approved", status: "live", property: "promoted", slots: ["footer"], properties: ["publisher-ok"], href: "https://example.com/" },
+    { id: "approved", status: "live", relationship: "house", property: "promoted", slots: ["footer"], properties: ["publisher-ok"], href: "https://example.com/" },
   ] });
   for (const url of [
     "https://ads.example/click?slot=sidebar&property=publisher-ok&creative=approved",
@@ -258,4 +258,31 @@ test("unknown route returns 404", async () => {
   const worker = createAdServerWorker();
   const response = await worker.fetch(new Request("https://ads.example/nowhere"), {});
   assert.equal(response.status, 404);
+});
+
+test("GET /ad provides machine-readable sponsorship and GET /click expires at the same instant", async () => {
+  let clock = Date.parse("2026-10-17T23:00:00Z");
+  const campaign = {
+    id: "paid", status: "live", relationship: "affiliate",
+    property: "promoted", properties: ["publisher"], slots: ["footer"], contexts: ["finance"],
+    title: "Example", body: "Referral offer", href: "https://example.org/offer",
+    disclosure: "Referral link: the publisher may receive a commission.",
+    expiresAt: "2026-10-18T00:00:00Z",
+  };
+  const worker = createAdServerWorker({ catalog: [campaign], nowMs: () => clock });
+  const before = await worker.fetch(new Request("https://ads.example/ad?slot=footer&property=publisher&context=finance"), {});
+  assert.equal(before.status, 200);
+  const offer = (await before.json()).creative;
+  assert.equal(offer.relationship, "affiliate");
+  assert.equal(offer.disclosure, campaign.disclosure);
+  assert.equal(offer.linkRel, "sponsored nofollow");
+  const redirect = await worker.fetch(new Request("https://ads.example/click?slot=footer&property=publisher&creative=paid", { redirect: "manual" }), {});
+  assert.equal(redirect.status, 302);
+  assert.equal(redirect.headers.get("location"), campaign.href);
+  clock = Date.parse("2026-10-18T00:00:00Z");
+  const after = await worker.fetch(new Request("https://ads.example/ad?slot=footer&property=publisher"), {});
+  assert.equal(after.status, 404);
+  const refusedClick = await worker.fetch(new Request("https://ads.example/click?slot=footer&property=publisher&creative=paid", { redirect: "manual" }), {});
+  assert.equal(refusedClick.status, 404);
+  assert.equal(refusedClick.headers.get("location"), null);
 });

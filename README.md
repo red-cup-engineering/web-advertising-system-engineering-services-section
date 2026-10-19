@@ -10,9 +10,19 @@ The house advertising engine, `@red-cup-engineering/web-advertising-system-engin
   it is about (`/ad?slot&property&context`), creatives declaring that context are preferred, and
   the pick rotates by day. No cookie or reader profile is kept. A creative never advertises the
   property it promotes.
-- `src/kv-chain.mjs` and `src/receipts.mjs` keep a hash-chained receipt of every impression and
-  click. `GET /receipts` and `GET /catalog` expose them. `scripts/sync-ad-receipts-to-journal.mjs`
-  copies the chain into the one journal.
+- The Cloudflare Analytics Engine dataset `AD_ACTIVITY` receives best-effort aggregate
+  creative-response and outbound-redirect observations for the whole advertising service.
+  It records only the event, slot, publisher property, creative ID and relationship:
+  no reader IDs, URLs, IPs or profiles. WAE may sample; these events are neither
+  verified human impressions nor billable conversions.
+- `src/kv-chain.mjs` and `src/receipts.mjs` retain original source-observed,
+  paid-campaign and historical receipt custody. Paid creatives refuse to serve or
+  redirect without an accountable KV write. `GET /receipts?since=N` reads
+  an exact 100-entry-at-most sequence page with a next cursor; missing rows
+  refuse. `scripts/sync-ad-receipts-to-journal.mjs` consumes every page
+  and receives the whole intact chain in the existing semantic journal.
+  The source journal CLI's SEAVT dependency is development/operations-only;
+  it is not linked into the production Worker.
 - `sites/house-ads-server` is the Cloudflare Worker that deploys it
   (`ads.561.group`).
 
@@ -47,12 +57,19 @@ The current source catalog contains only house creatives. Do not activate a
 third-party campaign until the receiving property renders those fields and
 the actual offer, terms, rights, merchant attribution and expiry are qualified.
 Do not treat an ad API response as a verified human impression or a redirect
-request as an independently received purchase. Receipt KV write failure means
-that the delivered response has **no durable ad attribution**; never synthesize
-a conversion count from it.
+request as an independently received purchase. For paid creatives, a KV receipt refusal now suppresses both serving and
+redirect. For house creatives, KV is not used at all. Cloudflare aggregate activity
+is a non-billable response/redirect signal, not a rendered human impression or
+conversion. Never synthesize booked revenue from either signal. The older KV
+chain is not transactional under concurrency, so do not use it alone for
+settlement-grade advertising billing.
 
 The original FNV rotation seed now comes from Computer Data; JSON identity
 comes from the house JSON service; RFC 6920 NI hashing comes from the URI
 service. Historic ad receipt byte identity is pinned by a golden fixture, not
 recomputed as a SignCell/CBOR semantic identity. Ad slots, campaign admission,
 redirects and merchant disclosures stay downstream in this advertising engine.
+
+Version `0.2.1` is a source candidate until its exact registry artifact and the
+`house-ads-server-site` consumer are independently installed. The site declares
+its own `AD_ACTIVITY` dataset while retaining legacy KV custody for paid traffic.

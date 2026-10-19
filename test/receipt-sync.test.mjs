@@ -1,17 +1,23 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readAdReceiptSnapshot, syncAdReceipts } from "../scripts/sync-ad-receipts-to-journal.mjs";
+import { buildDeliveryReceipt } from "../src/receipts.mjs";
 
 const origin = "https://ads.561.group";
 
-function receipts(count) {
-  return Array.from({ length: count }, (_, seq) => ({
-    seq, id: "ni:///sha-256;ad-" + seq,
-    prevHash: seq ? "ni:///sha-256;ad-" + (seq - 1) : null,
-    type: seq % 2 ? "click" : "impression", slot: "footer",
-    property: "koios-news", creativeId: "promotion",
-    occurredAt: "2026-10-19T00:00:00Z",
-  }));
+async function receipts(count) {
+  const rows = [];
+  let prevHash = null;
+  for (let seq = 0; seq < count; seq += 1) {
+    const receipt = await buildDeliveryReceipt({
+      prevHash, type: seq % 2 ? "click" : "impression", slot: "footer",
+      property: "koios-news", creativeId: "promotion",
+      requestId: "fixture-" + seq, occurredAt: "2026-10-19T00:00:00Z",
+    });
+    rows.push({ seq, ...receipt });
+    prevHash = receipt.id;
+  }
+  return rows;
 }
 
 function service(rows, modifier = (_since, page) => page) {
@@ -41,7 +47,7 @@ function journal() {
 }
 
 test("the actual paged source sends all 205 sequential entries, not just the first 100", async () => {
-  const rows = receipts(205), { fetchImpl, calls } = service(rows);
+  const rows = await receipts(205), { fetchImpl, calls } = service(rows);
   const received = await readAdReceiptSnapshot(origin, fetchImpl);
   assert.deepEqual(received, rows);
   assert.deepEqual(calls.map(call => call.since), [0, 100, 200]);
@@ -49,7 +55,7 @@ test("the actual paged source sends all 205 sequential entries, not just the fir
 });
 
 test("one complete source snapshot enters the original semantic journal once", async () => {
-  const rows = receipts(205), { fetchImpl } = service(rows), store = journal();
+  const rows = await receipts(205), { fetchImpl } = service(rows), store = journal();
   assert.deepEqual(await syncAdReceipts({ adServerUrl: origin, journal: store, fetchImpl }), {
     pulled: 205, appended: 205, skipped: 0,
   });
@@ -71,7 +77,7 @@ test("zero receipts mean no ledger writes", async () => {
 });
 
 test("a missing middle page or broken sequence refuses before any journal write", async () => {
-  const rows = receipts(205), store = journal();
+  const rows = await receipts(205), store = journal();
   for (const transform of [
     (since, page) => since === 100 ? { ...page, entries: [] } : page,
     (since, page) => since === 100
@@ -80,15 +86,18 @@ test("a missing middle page or broken sequence refuses before any journal write"
     (since, page) => since === 100
       ? { ...page, entries: page.entries.map((row, i) => i === 0 ? { ...row, prevHash: "wrong" } : row) }
       : page,
+    (since, page) => since === 100
+      ? { ...page, entries: page.entries.map((row, i) => i === 3 ? { ...row, property: "forged" } : row) }
+      : page,
   ]) {
     await assert.rejects(syncAdReceipts({ adServerUrl: origin, journal: store,
-      fetchImpl: service(rows, transform).fetchImpl }), /required page|gap/u);
+      fetchImpl: service(rows, transform).fetchImpl }), /required page|gap|address mismatch/u);
     assert.equal(store.records.length, 0);
   }
 });
 
 test("a contradictory snapshot head and broken cursor refuse without partial receipts", async () => {
-  const rows = receipts(105);
+  const rows = await receipts(105);
   await assert.rejects(readAdReceiptSnapshot(origin,
     service(rows, (since, page) => since === 0 ? { ...page, head: {seq:104,id:"wrong"} } : page).fetchImpl), /starting chain head/u);
   await assert.rejects(readAdReceiptSnapshot(origin,

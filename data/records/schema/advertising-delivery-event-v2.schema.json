@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://561.group/schema/advertising-services-section/advertising-delivery-event-v2.schema.json",
+  "title": "Advertising delivery event v2",
+  "description": "One immutable, content-addressed event keyed independently in Workers KV. Browser-reported view opportunities are NOT certified, billable human impressions.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "kind",
+    "type",
+    "slot",
+    "property",
+    "creativeId",
+    "context",
+    "requestId",
+    "occurredAt",
+    "decisionReason",
+    "evidenceKind"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^ni:///sha-256;[A-Za-z0-9_-]{43}$"
+    },
+    "kind": {
+      "const": "advertising.delivery-event/v2"
+    },
+    "type": {
+      "enum": [
+        "view",
+        "click"
+      ]
+    },
+    "slot": {
+      "type": "string",
+      "minLength": 1
+    },
+    "property": {
+      "type": "string",
+      "minLength": 1
+    },
+    "creativeId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "context": {
+      "type": "array",
+      "maxItems": 8,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 99
+      }
+    },
+    "requestId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "decisionReason": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "evidenceKind": {
+      "enum": [
+        "publisher-client-visibility-report",
+        "redirect-request"
+      ]
+    }
+  }
+}

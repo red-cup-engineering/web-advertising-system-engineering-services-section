@@ -1,6 +1,6 @@
 import { HOUSE_CREATIVE_CATALOG } from "../catalog.mjs";
 import { listEligibleCreatives, selectCreative } from "../advertising.mjs";
-import { appendChainedReceipt, chainHead, listChain } from "../kv-chain.mjs";
+import { recordDeliveryEvent, listDeliveryEvents } from "../kv-events.mjs";
 
 /**
  * House properties call this ad server cross-origin (play.561.group,
@@ -11,7 +11,7 @@ import { appendChainedReceipt, chainHead, listChain } from "../kv-chain.mjs";
 function json(body, init = {}) {
   return new Response(JSON.stringify(body, null, 2), {
     status: init.status ?? 200,
-    headers: { "content-type": "application/json; charset=utf-8", "access-control-allow-origin": "*" },
+    headers: { "content-type": "application/json; charset=utf-8", "access-control-allow-origin": "*", "cache-control": "no-store" },
   });
 }
 
@@ -53,7 +53,8 @@ function nextUtcQuotaReset(nowMs) {
 function reportReceiptGap({ type, slot, property, creativeId, decisionReason, requestId, error }) {
   console.error(JSON.stringify({
     event: "advertising.receipt-persistence-unavailable",
-    delivered: false,
+    attempted: true,
+    recorded: false,
     attribution: "unavailable",
     type,
     slot,
@@ -93,12 +94,9 @@ function recordActivity(env, { event, slot, property, creativeId, relationship }
 
 /**
  * Build the house ad server's fetch handler. GET /ad?slot&property[&context] returns
- * one contextual (no cookies, no cross-request profile) creative. Ordinary
- * house responses and redirects emit nonbillable aggregate activity without
- * consuming Workers KV. Paid campaigns require the existing receipt chain
- * before a creative response or redirect. GET /receipts remains the custody
- * reader for that chain and its historic entries; GET /catalog reads offers.
- * Analytics activity is not a witnessed human view, conversion, or payment.
+ * one contextual creative without recording an impression. POST /view stores
+ * a browser-reported visibility opportunity, and GET /click records a redirect.
+ * GET /receipts pages content-addressed independent events or v1 history.
  * @param {object} [options]
  * @param {import("../catalog.mjs").AdCreative[]} [options.catalog]
  * @returns {{fetch: (request: Request, env: object) => Promise<Response>}}
@@ -117,108 +115,115 @@ export function createAdServerWorker({ catalog = HOUSE_CREATIVE_CATALOG, nowMs =
     async fetch(request, env) {
       const url = new URL(request.url);
       const kv = env?.AD_RECEIPTS;
+      if (request.method === "OPTIONS" && url.pathname === "/view") {
+        return new Response(null, {status: 204, headers: {
+          "access-control-allow-origin": "*",
+          "access-control-allow-methods": "POST, OPTIONS",
+          "access-control-allow-headers": "content-type",
+        }});
+      }
 
       if (url.pathname === "/health") {
+        if (request.method !== "GET") return json({error:"method not allowed"},{status:405});
         return json({ ok: true, service: "advertising-services-section", catalogSize: catalog.length });
       }
 
       if (url.pathname === "/catalog") {
+        if (request.method !== "GET") return json({error:"method not allowed"},{status:405});
         return json({ catalog });
       }
 
       if (url.pathname === "/ad") {
+        if (request.method !== "GET") return json({error:"method not allowed"},{status:405});
         const slot = url.searchParams.get("slot");
         const property = url.searchParams.get("property");
-        if (!placementName(slot) || !placementName(property))
-          return json({ error: "invalid slot or property" }, { status: 400 });
+        if (!placementName(slot) || !placementName(property)) return json({error:"invalid slot or property"},{status:400});
         const context = pageContext(url);
         const picked = selectCreative({ catalog, slot, property, context, now: new Date(nowMs()) });
         if (!picked) return json({ error: "no eligible creative for slot/property" }, { status: 404 });
+        // A paid campaign requires a functioning receipt sink, but selection
+        // itself is never a view or a charged impression.
+        if (picked.creative.relationship !== "house" && (!kv || !receiptWritesOpen()))
+          return json({error:"paid campaign delivery unavailable"},{status:503});
+        const activityStatus=recordActivity(env,{event:"creative-response",slot,property,
+          creativeId:picked.creative.id,relationship:picked.creative.relationship});
+        return json({ creative: publicCreative(picked.creative), activityStatus });
+      }
 
-        let receipt = null;
-        // Paid decisions need the existing accountable custody. An ordinary
-        // house promotion never spends two KV writes on a nonbillable response.
-        if (picked.creative.relationship !== "house") {
-          if (!kv || !receiptWritesOpen())
-            return json({ error: "paid campaign receipt unavailable" }, { status: 503 });
-          const requestId = crypto.randomUUID();
-          try {
-            receipt = await appendChainedReceipt(kv, {
-              type: "impression", slot, property,
-              creativeId: picked.creative.id,
-              decisionReason: picked.decision.reason, requestId,
-            });
-          } catch (error) {
-            onReceiptWriteFailure({ type: "impression", slot, property, creativeId: picked.creative.id, decisionReason: picked.decision.reason, requestId }, error);
-            return json({ error: "paid campaign receipt unavailable" }, { status: 503 });
-          }
+      if (url.pathname === "/view") {
+        if (request.method !== "POST") return json({error:"method not allowed"},{status:405});
+        if (url.href.length > 2048) return json({error:"request too long"},{status:414});
+        const slot=url.searchParams.get("slot");
+        const property=url.searchParams.get("property");
+        const creativeId=url.searchParams.get("creative");
+        if (!placementName(slot) || !placementName(property) || !creativeId)
+          return json({error:"invalid slot, property or creative"},{status:400});
+        const context=pageContext(url);
+        const eligible=listEligibleCreatives({catalog,slot,property,context,now:new Date(nowMs())});
+        const creative=eligible.find(c=>c.id===creativeId);
+        if (!creative) return json({error:"creative not eligible for slot/property/context"},{status:404});
+        if (creative.relationship === "house") {
+          const activityStatus=recordActivity(env,{event:"client-visible-opportunity",slot,property,
+            creativeId,relationship:creative.relationship});
+          return json({status:activityStatus==="submitted"?"submitted":"unbound",activityStatus},{status:202});
         }
-        const activityStatus = recordActivity(env, {
-          event: "creative-response", slot, property,
-          creativeId: picked.creative.id, relationship: picked.creative.relationship,
-        });
-        return json({
-          creative: publicCreative(picked.creative),
-          receipt: receipt ? { id: receipt.id, seq: receipt.seq } : null,
-          receiptStatus: receipt ? "recorded" : "not-applicable",
-          activityStatus,
-        });
+        if (!kv || !receiptWritesOpen())
+          return json({error:"paid view event not recorded"},{status:503});
+        const requestId=crypto.randomUUID();
+        try {
+          const receipt=await recordDeliveryEvent(kv,{type:"view",slot,property,creativeId,
+            context,decisionReason:"publisher-client-50pct-1s",
+            requestId,occurredAt:new Date(nowMs()).toISOString()});
+          return json({status:"recorded",id:receipt.id},{status:202});
+        } catch(error) {
+          onReceiptWriteFailure({type:"view",slot,property,creativeId,requestId},error);
+          return json({error:"view event not recorded"},{status:503});
+        }
       }
 
       if (url.pathname === "/click") {
+        if (request.method !== "GET") return json({error:"method not allowed"},{status:405});
         const slot = url.searchParams.get("slot");
         const property = url.searchParams.get("property");
         const creativeId = url.searchParams.get("creative");
-        if (!placementName(slot) || !placementName(property) || !creativeId)
-          return json({ error: "invalid slot, property, or creative" }, { status: 400 });
-        // The same context, live state and scope apply to both serving and
-        // redirects. A forged or expired creative never becomes a destination.
+        if (!placementName(slot) || !placementName(property) || !creativeId) return json({error:"invalid slot, property or creative"},{status:400});
+        // Direct /click calls must satisfy the same live/slot/property eligibility
+        // as /ad. Refused clicks are neither redirected nor receipted.
         const creative = listEligibleCreatives({ catalog, slot, property, context: pageContext(url), now: new Date(nowMs()) }).find((entry) => entry.id === creativeId);
         if (!creative) return json({ error: "creative is not eligible for slot/property" }, { status: 404 });
-
-        let receiptStatus = "not-applicable";
+        let receiptStatus="not-applicable";
         if (creative.relationship !== "house") {
           if (!kv || !receiptWritesOpen())
-            return json({ error: "paid campaign receipt unavailable" }, { status: 503 });
-          const requestId = crypto.randomUUID();
+            return json({error:"paid campaign delivery unavailable"},{status:503});
+          const requestId=crypto.randomUUID();
           try {
-            await appendChainedReceipt(kv, {
-              type: "click", slot, property, creativeId,
-              decisionReason: "publisher-click", requestId,
-            });
-            receiptStatus = "recorded";
-          } catch (error) {
-            onReceiptWriteFailure({ type: "click", slot, property, creativeId, decisionReason: "publisher-click", requestId }, error);
-            return json({ error: "paid campaign receipt unavailable" }, { status: 503 });
+            await recordDeliveryEvent(kv,{type:"click",slot,property,creativeId,
+              context:pageContext(url),decisionReason:"redirect-request",requestId,
+              occurredAt:new Date(nowMs()).toISOString()});
+            receiptStatus="recorded";
+          } catch(error) {
+            onReceiptWriteFailure({type:"click",slot,property,creativeId,requestId},error);
+            return json({error:"paid campaign event not recorded"},{status:503});
           }
         }
-        const activityStatus = recordActivity(env, {
-          event: "outbound-redirect", slot, property, creativeId,
-          relationship: creative.relationship,
-        });
-        return new Response(null, {
-          status: 302,
-          headers: {
-            location: creative.href,
-            "x-561-receipt-status": receiptStatus,
-            "x-561-activity-status": activityStatus,
-          },
-        });
+        const activityStatus=recordActivity(env,{event:"outbound-redirect",slot,property,
+          creativeId,relationship:creative.relationship});
+        return new Response(null,{status:302,headers:{location:creative.href,
+          "x-561-receipt-status":receiptStatus,"x-561-activity-status":activityStatus}});
+
       }
 
       if (url.pathname === "/receipts") {
+        if (request.method !== "GET") return json({error:"method not allowed"},{status:405});
         if (!kv) return json({ error: "receipt chain not bound" }, { status: 503 });
-        const raw = url.searchParams.get("since") ?? "0";
-        if (!/^(0|[1-9]\d*)$/u.test(raw) || !Number.isSafeInteger(Number(raw)))
-          return json({ error: "invalid receipt cursor" }, { status: 400 });
-        const since = Number(raw);
-        try {
-          const head = await chainHead(kv);
-          const entries = await listChain(kv, { since, head });
-          const nextSince = since + entries.length;
-          return json({ head, entries, nextSince, complete: !head || nextSince > head.seq });
-        } catch {
-          return json({ error: "receipt chain incomplete" }, { status: 503 });
+        const series=url.searchParams.get("series")??"current";
+        const cursor=url.searchParams.get("cursor")??undefined;
+        const rawLimit=url.searchParams.get("limit")??"50";
+        if (!/^[0-9]{1,3}$/u.test(rawLimit)) return json({error:"invalid limit"},{status:400});
+        try { return json(await listDeliveryEvents(kv,{series,cursor,limit:Number(rawLimit)})); }
+        catch(error) {
+          if (error instanceof TypeError) return json({error:error.message},{status:400});
+          throw error;
         }
       }
 

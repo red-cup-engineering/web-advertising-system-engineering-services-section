@@ -26,6 +26,15 @@ The house advertising engine, `@red-cup-engineering/web-advertising-system-engin
 - `sites/house-ads-server` is the Cloudflare Worker that deploys it
   (`ads.561.group`).
 
+## Current delivery boundary (0.3.0-dev.1)
+
+- `GET /ad` selects an eligible creative. An ad response is not a human view or a billable impression. House responses use only optional aggregate Workers Analytics Engine activity, with zero KV writes. Paid campaigns require an available receipt sink but do not write until the actual reported view or redirect.
+- The publisher reports a visible-placement opportunity through `POST /view` only after at least half the rendered placement is visible in an active browser tab for one continuous second. House placements use the existing aggregate `AD_ACTIVITY` provider; paid placements store one content-addressed event in `AD_RECEIPTS`. Client telemetry is untrusted and cannot establish verified human exposure or lawful billing.
+- `GET /click` rechecks campaign validity: house promotions redirect with aggregate activity, while paid redirects fail closed when their event cannot be stored. Neither endpoint establishes a purchase.
+- `src/delivery-events.mjs` derives NI identities from the original canonical JSON/URI suppliers; `src/kv-events.mjs` writes one independent key per event. The racy v1 head-writer is retired, while `GET /receipts?series=legacy` retains historical KV entries without rewriting them.
+- `scripts/sync-ad-receipts-to-journal.mjs` receives cursor-paged historical/current event series through the existing semantic journal. No duplicate ledger or inferred global ordering is introduced.
+- These source changes do not install a new package, authorize paid campaigns, guarantee KV capacity, or establish revenue.
+
 The engine was deleted from the tree on 2026-09-19 (f773c353e79) while its Worker kept serving.
 It was revived on 2026-09-27 from that commit's parent, with the catalog moved from code into its
 record and contextual preference added.

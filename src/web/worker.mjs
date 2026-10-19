@@ -183,7 +183,7 @@ export function createAdServerWorker({ catalog = HOUSE_CREATIVE_CATALOG, nowMs =
         const series=url.searchParams.get("series")??"current";
         const cursor=url.searchParams.get("cursor")??undefined;
         const rawLimit=url.searchParams.get("limit")??"50";
-        if (!/^\\d{1,3}$/u.test(rawLimit)) return json({error:"invalid limit"},{status:400});
+        if (!/^[0-9]{1,3}$/u.test(rawLimit)) return json({error:"invalid limit"},{status:400});
         try { return json(await listDeliveryEvents(kv,{series,cursor,limit:Number(rawLimit)})); }
         catch(error) {
           if (error instanceof TypeError) return json({error:error.message},{status:400});

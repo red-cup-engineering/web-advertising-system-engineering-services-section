@@ -1,6 +1,6 @@
 import { HOUSE_CREATIVE_CATALOG } from "../catalog.mjs";
 import { listEligibleCreatives, selectCreative } from "../advertising.mjs";
-import { appendChainedReceipt, chainHead, listChain } from "../kv-chain.mjs";
+import { recordDeliveryEvent, listDeliveryEvents } from "../kv-events.mjs";
 
 /**
  * House properties call this ad server cross-origin (play.561.group,
@@ -11,7 +11,7 @@ import { appendChainedReceipt, chainHead, listChain } from "../kv-chain.mjs";
 function json(body, init = {}) {
   return new Response(JSON.stringify(body, null, 2), {
     status: init.status ?? 200,
-    headers: { "content-type": "application/json; charset=utf-8", "access-control-allow-origin": "*" },
+    headers: { "content-type": "application/json; charset=utf-8", "access-control-allow-origin": "*", "cache-control": "no-store" },
   });
 }
 
@@ -53,7 +53,8 @@ function nextUtcQuotaReset(nowMs) {
 function reportReceiptGap({ type, slot, property, creativeId, decisionReason, requestId, error }) {
   console.error(JSON.stringify({
     event: "advertising.receipt-persistence-unavailable",
-    delivered: true,
+    attempted: true,
+    recorded: false,
     attribution: "unavailable",
     type,
     slot,
@@ -68,11 +69,9 @@ function reportReceiptGap({ type, slot, property, creativeId, decisionReason, re
 
 /**
  * Build the house ad server's fetch handler. GET /ad?slot&property[&context] returns
- * one contextual (no cookies, no cross-request profile) creative and
- * records an impression receipt; GET /click redirects and records a click
- * receipt; GET /receipts and GET /catalog expose the same chain and
- * catalog transparently — the receipts-native, auditable-by-default
- * differentiator no incumbent network offers.
+ * one contextual creative without recording an impression. POST /view stores
+ * a browser-reported visibility opportunity, and GET /click records a redirect.
+ * GET /receipts pages content-addressed independent events or v1 history.
  * @param {object} [options]
  * @param {import("../catalog.mjs").AdCreative[]} [options.catalog]
  * @returns {{fetch: (request: Request, env: object) => Promise<Response>}}
@@ -91,6 +90,13 @@ export function createAdServerWorker({ catalog = HOUSE_CREATIVE_CATALOG, nowMs =
     async fetch(request, env) {
       const url = new URL(request.url);
       const kv = env?.AD_RECEIPTS;
+      if (request.method === "OPTIONS" && url.pathname === "/view") {
+        return new Response(null, {status: 204, headers: {
+          "access-control-allow-origin": "*",
+          "access-control-allow-methods": "POST, OPTIONS",
+          "access-control-allow-headers": "content-type",
+        }});
+      }
 
       if (url.pathname === "/health") {
         return json({ ok: true, service: "advertising-services-section", catalogSize: catalog.length });
@@ -107,29 +113,34 @@ export function createAdServerWorker({ catalog = HOUSE_CREATIVE_CATALOG, nowMs =
         const context = pageContext(url);
         const picked = selectCreative({ catalog, slot, property, context, now: new Date(nowMs()) });
         if (!picked) return json({ error: "no eligible creative for slot/property" }, { status: 404 });
-        let receipt = null;
-        let receiptStatus = kv ? "recorded" : "unbound";
-        if (kv && receiptWritesOpen()) {
-          const requestId = crypto.randomUUID();
-          try {
-            receipt = await appendChainedReceipt(kv, {
-              type: "impression",
-              slot,
-              property,
-              creativeId: picked.creative.id,
-              decisionReason: picked.decision.reason,
-              requestId,
-            });
-          } catch (error) {
-            receiptStatus = "unavailable";
-            onReceiptWriteFailure({ type: "impression", slot, property, creativeId: picked.creative.id, decisionReason: picked.decision.reason, requestId }, error);
-          }
-        } else if (kv) receiptStatus = "unavailable";
-        return json({
-          creative: publicCreative(picked.creative),
-          receipt: receipt ? { id: receipt.id, seq: receipt.seq } : null,
-          receiptStatus,
-        });
+        // Selecting a creative is not a displayed or viewable impression.
+        return json({ creative: publicCreative(picked.creative) });
+      }
+
+      if (url.pathname === "/view") {
+        if (request.method !== "POST") return json({error:"method not allowed"},{status:405});
+        if (url.href.length > 2048) return json({error:"request too long"},{status:414});
+        const slot=url.searchParams.get("slot");
+        const property=url.searchParams.get("property");
+        const creativeId=url.searchParams.get("creative");
+        if (!slot || !property || !creativeId)
+          return json({error:"slot, property, creative required"},{status:400});
+        const context=pageContext(url);
+        const eligible=listEligibleCreatives({catalog,slot,property,context,now:new Date(nowMs())});
+        if (!eligible.some(c=>c.id===creativeId))
+          return json({error:"creative not eligible for slot/property/context"},{status:404});
+        if (!kv || !receiptWritesOpen())
+          return json({error:"view event not recorded"},{status:503});
+        const requestId=crypto.randomUUID();
+        try {
+          const receipt=await recordDeliveryEvent(kv,{type:"view",slot,property,creativeId,
+            context,decisionReason:"publisher-client-50pct-1s",
+            requestId,occurredAt:new Date(nowMs()).toISOString()});
+          return json({status:"recorded",id:receipt.id},{status:202});
+        } catch(error) {
+          onReceiptWriteFailure({type:"view",slot,property,creativeId,requestId},error);
+          return json({error:"view event not recorded"},{status:503});
+        }
       }
 
       if (url.pathname === "/click") {
@@ -145,13 +156,15 @@ export function createAdServerWorker({ catalog = HOUSE_CREATIVE_CATALOG, nowMs =
         if (kv && receiptWritesOpen()) {
           const requestId = crypto.randomUUID();
           try {
-            await appendChainedReceipt(kv, {
+            await recordDeliveryEvent(kv, {
               type: "click",
               slot,
               property,
               creativeId,
-              decisionReason: "publisher-click",
+              context: pageContext(url),
+              decisionReason: "redirect-request",
               requestId,
+              occurredAt: new Date(nowMs()).toISOString(),
             });
           } catch (error) {
             receiptStatus = "unavailable";
@@ -163,9 +176,15 @@ export function createAdServerWorker({ catalog = HOUSE_CREATIVE_CATALOG, nowMs =
 
       if (url.pathname === "/receipts") {
         if (!kv) return json({ error: "receipt chain not bound" }, { status: 503 });
-        const since = Number(url.searchParams.get("since") ?? "0");
-        const [entries, head] = await Promise.all([listChain(kv, { since }), chainHead(kv)]);
-        return json({ head, entries });
+        const series=url.searchParams.get("series")??"current";
+        const cursor=url.searchParams.get("cursor")??undefined;
+        const rawLimit=url.searchParams.get("limit")??"50";
+        if (!/^\\d{1,3}$/u.test(rawLimit)) return json({error:"invalid limit"},{status:400});
+        try { return json(await listDeliveryEvents(kv,{series,cursor,limit:Number(rawLimit)})); }
+        catch(error) {
+          if (error instanceof TypeError) return json({error:error.message},{status:400});
+          throw error;
+        }
       }
 
       return json({ error: "not found" }, { status: 404 });

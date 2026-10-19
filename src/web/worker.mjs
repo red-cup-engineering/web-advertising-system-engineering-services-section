@@ -24,6 +24,10 @@ function publicCreative(creative) {
     // search engines and agent clients must also receive a paid-link relation.
     disclosure: relationship === "house" ? null : creative.disclosure,
     linkRel: relationship === "house" ? null : "sponsored nofollow",
+    allowedContexts: relationship === "house" ? null : creative.allowedContexts,
+    eligibility: relationship === "house" ? null : (creative.eligibility ?? null),
+    riskNotice: relationship === "house" ? null : (creative.riskNotice ?? null),
+    expiresAt: relationship === "house" ? null : creative.expiresAt,
   };
 }
 
@@ -37,6 +41,9 @@ function kvWriteQuotaExhausted(error) {
   return /\b429\b|(?:KV|put|write).*(?:quota|limit|exceed)|(?:quota|limit|exceed).*(?:KV|put|write)/iu.test(message);
 }
 
+function pageContext(url) {
+  return (url.searchParams.get("context") ?? "").split(",").map(v => v.trim()).filter(Boolean).slice(0,8);
+}
 function nextUtcQuotaReset(nowMs) {
   const when = new Date(nowMs);
   return Date.UTC(when.getUTCFullYear(), when.getUTCMonth(), when.getUTCDate() + 1);
@@ -97,7 +104,7 @@ export function createAdServerWorker({ catalog = HOUSE_CREATIVE_CATALOG, nowMs =
         const slot = url.searchParams.get("slot");
         const property = url.searchParams.get("property");
         if (!slot || !property) return json({ error: "slot and property query parameters are required" }, { status: 400 });
-        const context = (url.searchParams.get("context") ?? "").split(",").map((value) => value.trim()).filter(Boolean).slice(0, 8);
+        const context = pageContext(url);
         const picked = selectCreative({ catalog, slot, property, context, now: new Date(nowMs()) });
         if (!picked) return json({ error: "no eligible creative for slot/property" }, { status: 404 });
         let receipt = null;
@@ -132,7 +139,7 @@ export function createAdServerWorker({ catalog = HOUSE_CREATIVE_CATALOG, nowMs =
         if (!slot || !property || !creativeId) return json({ error: "slot, property, and creative query parameters are required" }, { status: 400 });
         // Direct /click calls must satisfy the same live/slot/property eligibility
         // as /ad. Refused clicks are neither redirected nor receipted.
-        const creative = listEligibleCreatives({ catalog, slot, property, now: new Date(nowMs()) }).find((entry) => entry.id === creativeId);
+        const creative = listEligibleCreatives({ catalog, slot, property, context: pageContext(url), now: new Date(nowMs()) }).find((entry) => entry.id === creativeId);
         if (!creative) return json({ error: "creative is not eligible for slot/property" }, { status: 404 });
         let receiptStatus = kv ? "recorded" : "unbound";
         if (kv && receiptWritesOpen()) {

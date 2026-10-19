@@ -9,13 +9,15 @@ import { hashSeed } from "@red-cup-engineering/computer-data-engineering-service
  * @param {string} property Requesting property key (never advertised to itself).
  * @returns {import("./catalog.mjs").AdCreative[]} Eligible creatives, in catalog order.
  */
-export function listEligibleCreatives({ catalog, slot, property, now = new Date() }) {
+const pageContexts = context => new Set((Array.isArray(context) ? context : [context]).filter(v => typeof v === "string" && v.trim()));
+export function listEligibleCreatives({ catalog, slot, property, context = [], now = new Date() }) {
   if (!Array.isArray(catalog)) throw new TypeError("listEligibleCreatives requires a catalog array");
   if (!slot) throw new TypeError("listEligibleCreatives requires a slot");
   if (!property) throw new TypeError("listEligibleCreatives requires a property");
   if (!(now instanceof Date) || !Number.isFinite(now.getTime())) {
     throw new TypeError("listEligibleCreatives requires a valid clock");
   }
+  const wanted = pageContexts(context);
   return catalog.filter((creative) => {
     if (!creative || creative.status !== "live") return false;
     if (!["house", "sponsored", "affiliate"].includes(creative.relationship)) return false;
@@ -30,8 +32,13 @@ export function listEligibleCreatives({ catalog, slot, property, now = new Date(
       if (typeof creative.expiresAt !== "string" ||
           typeof creative.disclosure !== "string" || !creative.disclosure.trim()) return false;
       try {
-        if (new URL(creative.href).protocol !== "https:") return false;
+        const target = new URL(creative.href);
+        if (target.protocol !== "https:" || target.username || target.password) return false;
       } catch { return false; }
+      // The publisher's page topic is an admission condition, not a weak
+      // preference for commercial placements.
+      if (!Array.isArray(creative.allowedContexts) ||
+          !creative.allowedContexts.some(v => typeof v === "string" && wanted.has(v))) return false;
     }
     if (creative.property === property) return false;
     if (!Array.isArray(creative.slots) || !Array.isArray(creative.properties)) return false;
@@ -54,12 +61,12 @@ export function listEligibleCreatives({ catalog, slot, property, now = new Date(
  * @returns {?{creative: import("./catalog.mjs").AdCreative, decision: {slot: string, property: string, consideredIds: string[], selectedId: string, reason: string}}}
  */
 export function selectCreative({ catalog, slot, property, context = [], now = new Date() }) {
-  const all = listEligibleCreatives({ catalog, slot, property, now });
+  const all = listEligibleCreatives({ catalog, slot, property, context, now });
   if (all.length === 0) return null;
   // Contextual, never behavioral: the page says what it is about (an article's
   // desk, a game's genre), and creatives that declare that context are
   // preferred; with none matching, every eligible creative rotates.
-  const wanted = new Set((Array.isArray(context) ? context : [context]).filter((value) => typeof value === "string" && value !== ""));
+  const wanted = pageContexts(context);
   const matching = wanted.size === 0 ? [] : all.filter((creative) => (creative.contexts ?? []).some((value) => wanted.has(value)));
   const eligible = matching.length > 0 ? matching : all;
   const dayStamp = now.toISOString().slice(0, 10);

@@ -64,16 +64,16 @@ test("campaign expiry uses the supplied clock for both house and paid creatives"
   const expired = new Date("2026-10-18T00:00:00.000Z");
   const catalog = [
     { id: "house", status: "live", relationship: "house", slots: ["*"], properties: ["*"], property: "house-property", expiresAt: "2026-10-18T00:00:00.000Z" },
-    { id: "paid", status: "live", relationship: "sponsored", slots: ["*"], properties: ["*"], property: "advertiser", expiresAt: "2026-10-18T00:00:00.000Z", disclosure: "Paid advertising", href: "https://example.org/offer" },
+    { id: "paid", status: "live", relationship: "sponsored", slots: ["*"], properties: ["*"], property: "advertiser", expiresAt: "2026-10-18T00:00:00.000Z", disclosure: "Paid advertising", allowedContexts: ["business"], href: "https://example.org/offer" },
   ];
-  assert.deepEqual(listEligibleCreatives({ catalog, slot: "footer", property: "publisher", now: issued }).map(x => x.id), ["house", "paid"]);
-  assert.deepEqual(listEligibleCreatives({ catalog, slot: "footer", property: "publisher", now: expired }), []);
+  assert.deepEqual(listEligibleCreatives({ catalog, slot: "footer", property: "publisher", context: ["business"], now: issued }).map(x => x.id), ["house", "paid"]);
+  assert.deepEqual(listEligibleCreatives({ catalog, slot: "footer", property: "publisher", context: ["business"], now: expired }), []);
 });
 
 test("third-party eligibility refuses missing disclosure, expiry, unsafe redirect and untyped relations", () => {
-  const base = { id: "campaign", status: "live", relationship: "affiliate", slots: ["*"], properties: ["*"], property: "merchant", expiresAt: "2026-11-01T00:00:00Z", disclosure: "We may earn a referral commission.", href: "https://example.org/offer" };
+  const base = { id: "campaign", status: "live", relationship: "affiliate", slots: ["*"], properties: ["*"], property: "merchant", expiresAt: "2026-11-01T00:00:00Z", disclosure: "We may earn a referral commission.", allowedContexts: ["finance"], href: "https://example.org/offer" };
   const now = new Date("2026-10-18T00:00:00Z");
-  const eligible = creative => listEligibleCreatives({ catalog: [creative], slot: "footer", property: "publisher", now });
+  const eligible = creative => listEligibleCreatives({ catalog: [creative], slot: "footer", property: "publisher", context: ["finance"], now });
   assert.equal(eligible(base).length, 1);
   for (const changed of [
     { ...base, disclosure: "" },
@@ -83,6 +83,20 @@ test("third-party eligibility refuses missing disclosure, expiry, unsafe redirec
     { ...base, href: "javascript:alert(1)" },
     { ...base, relationship: undefined },
     { ...base, relationship: "unknown" },
+    { ...base, allowedContexts: [] },
+    { ...base, allowedContexts: undefined },
+    { ...base, href: "https://user:pass@example.org/offer" },
   ]) assert.deepEqual(eligible(changed), []);
   assert.throws(() => listEligibleCreatives({ catalog: [base], slot: "footer", property: "publisher", now: new Date("bad") }), /valid clock/);
+});
+
+test("third-party contextual admission fails closed while house placement still rotates",()=>{
+  const now=new Date("2026-10-17T12:00:00Z");
+  const house={id:"h",status:"live",relationship:"house",property:"house",slots:["*"],properties:["*"]};
+  const paid={id:"p",status:"live",relationship:"sponsored",property:"merchant",slots:["*"],properties:["*"],allowedContexts:["science"],disclosure:"Paid",expiresAt:"2026-11-01T00:00:00Z",href:"https://example.org/"};
+  assert.deepEqual(listEligibleCreatives({catalog:[house,paid],slot:"footer",property:"publisher",now}).map(x=>x.id),["h"]);
+  assert.deepEqual(listEligibleCreatives({catalog:[house,paid],slot:"footer",property:"publisher",context:["sports"],now}).map(x=>x.id),["h"]);
+  assert.deepEqual(listEligibleCreatives({catalog:[house,paid],slot:"footer",property:"publisher",context:["science"],now}).map(x=>x.id),["h","p"]);
+  assert.equal(selectCreative({catalog:[paid],slot:"footer",property:"publisher",context:["sports"],now}),null);
+  assert.equal(selectCreative({catalog:[paid],slot:"footer",property:"publisher",context:["science"],now}).creative.id,"p");
 });

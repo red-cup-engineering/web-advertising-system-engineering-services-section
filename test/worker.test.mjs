@@ -267,6 +267,9 @@ test("GET /ad provides machine-readable sponsorship and GET /click expires at th
     property: "promoted", properties: ["publisher"], slots: ["footer"], contexts: ["finance"],
     title: "Example", body: "Referral offer", href: "https://example.org/offer",
     disclosure: "Referral link: the publisher may receive a commission.",
+    allowedContexts: ["finance"],
+    eligibility: "Only eligible participants qualify.",
+    riskNotice: "Trading carries a risk of loss.",
     expiresAt: "2026-10-18T00:00:00Z",
   };
   const worker = createAdServerWorker({ catalog: [campaign], nowMs: () => clock });
@@ -276,13 +279,21 @@ test("GET /ad provides machine-readable sponsorship and GET /click expires at th
   assert.equal(offer.relationship, "affiliate");
   assert.equal(offer.disclosure, campaign.disclosure);
   assert.equal(offer.linkRel, "sponsored nofollow");
-  const redirect = await worker.fetch(new Request("https://ads.example/click?slot=footer&property=publisher&creative=paid", { redirect: "manual" }), {});
+  assert.deepEqual(offer.allowedContexts, ["finance"]);
+  assert.equal(offer.eligibility, campaign.eligibility);
+  assert.equal(offer.riskNotice, campaign.riskNotice);
+  assert.equal(offer.expiresAt, campaign.expiresAt);
+  assert.equal((await worker.fetch(new Request("https://ads.example/ad?slot=footer&property=publisher&context=sport"), {})).status, 404);
+  const badClick = await worker.fetch(new Request("https://ads.example/click?slot=footer&property=publisher&creative=paid",{redirect:"manual"}), {});
+  assert.equal(badClick.status, 404);
+  assert.equal(badClick.headers.get("location"), null);
+  const redirect = await worker.fetch(new Request("https://ads.example/click?slot=footer&property=publisher&creative=paid&context=finance", { redirect: "manual" }), {});
   assert.equal(redirect.status, 302);
   assert.equal(redirect.headers.get("location"), campaign.href);
   clock = Date.parse("2026-10-18T00:00:00Z");
   const after = await worker.fetch(new Request("https://ads.example/ad?slot=footer&property=publisher"), {});
   assert.equal(after.status, 404);
-  const refusedClick = await worker.fetch(new Request("https://ads.example/click?slot=footer&property=publisher&creative=paid", { redirect: "manual" }), {});
+  const refusedClick = await worker.fetch(new Request("https://ads.example/click?slot=footer&property=publisher&creative=paid&context=finance", { redirect: "manual" }), {});
   assert.equal(refusedClick.status, 404);
   assert.equal(refusedClick.headers.get("location"), null);
 });

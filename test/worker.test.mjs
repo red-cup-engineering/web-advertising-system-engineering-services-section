@@ -3,333 +3,247 @@ import assert from "node:assert/strict";
 import { createAdServerWorker } from "../src/web/worker.mjs";
 import { HOUSE_CREATIVE_CATALOG } from "../src/catalog.mjs";
 
-/** Minimal in-memory stand-in for a Cloudflare Workers KV namespace binding. */
-function createFakeKv() {
-  const store = new Map();
+const base="https://ads.example";
+const house={id:"our-news",status:"live",relationship:"house",property:"koios-news",
+  properties:["*"],slots:["footer"],title:"Read Koios.News",body:"First-party news",
+  href:"https://koios.news/",contexts:[]};
+const paid={id:"sponsor",status:"live",relationship:"affiliate",property:"merchant",
+  properties:["publisher"],slots:["footer"],title:"A qualified referral",body:"Terms apply",
+  href:"https://example.org/offer",disclosure:"The publisher may receive a commission.",
+  eligibility:"Eligible adults only.",riskNotice:"Loss of funds is possible.",
+  contexts:["science"],allowedContexts:["science"],expiresAt:"2099-12-31T23:59:59Z"};
+const houseQuery="/ad?slot=footer&property=game-561";
+const houseView="/view?slot=footer&property=game-561&creative=our-news";
+const houseClick="/click?slot=footer&property=game-561&creative=our-news";
+const paidQuery="/ad?slot=footer&property=publisher&context=science";
+const paidView="/view?slot=footer&property=publisher&creative=sponsor&context=science";
+const paidClick="/click?slot=footer&property=publisher&creative=sponsor&context=science";
+
+function fakeKV(){
+  const values=new Map(),writes=[];
   return {
-    async get(key, type) {
-      if (!store.has(key)) return null;
-      const raw = store.get(key);
-      return type === "json" ? JSON.parse(raw) : raw;
-    },
-    async put(key, value) {
-      store.set(key, value);
-    },
-    async list({ prefix }) {
-      return { keys: [...store.keys()].filter((key) => key.startsWith(prefix)).map((name) => ({ name })) };
+    values,writes,
+    async put(key,value){writes.push(key);values.set(key,value);},
+    async get(key,type){const v=values.get(key);return v===undefined?null:type==="json"?JSON.parse(v):v;},
+    async list({prefix,limit=50,cursor}){
+      const keys=[...values.keys()].filter(k=>k.startsWith(prefix)).sort();
+      const start=cursor?Number(cursor):0;
+      const selected=keys.slice(start,start+limit),end=start+selected.length;
+      return {keys:selected.map(name=>({name})),list_complete:end>=keys.length,
+        cursor:end>=keys.length?"":String(end)};
     },
   };
 }
-
-
-/** Only aggregate fields are accepted; no identifiers about a reader exist. */
-function fakeActivity() {
+function fakeActivity(){
   const points=[];
-  return { points, writeDataPoint(point){ points.push(point); } };
+  return {points,writeDataPoint(point){points.push(point);}};
 }
-const PAID = Object.freeze({
-  id:"paid",status:"live",relationship:"affiliate",property:"promoted",
-  properties:["publisher"],slots:["footer"],contexts:["finance"],
-  title:"Example qualifying offer",body:"Referral",
-  href:"https://example.org/offer",disclosure:"Publisher may earn a referral reward.",
-  allowedContexts:["finance"],eligibility:"Qualifying adults only.",
-  riskNotice:"Capital at risk.",expiresAt:"2099-12-31T23:59:59Z",
-});
-const paidAd="/ad?slot=footer&property=publisher&context=finance";
-const paidClick="/click?slot=footer&property=publisher&creative=paid&context=finance";
+const worker=(catalog,nowMs=()=>Date.parse("2026-10-19T12:00:00Z"))=>
+  createAdServerWorker({catalog,nowMs});
 
-
-test("aggregate data points describe only catalog and placement, not readers",()=>{
-  const activity=fakeActivity();
-  activity.writeDataPoint({indexes:["koios-news"],blobs:["creative-response","footer","offer","house"],doubles:[1]});
-  assert.deepEqual(Object.keys(activity.points[0]).sort(),["blobs","doubles","indexes"]);
-  assert.equal(activity.points[0].blobs.length,4);
-});
-
-test("GET /health reports ok and catalog size", async () => {
-  const worker = createAdServerWorker();
-  const response = await worker.fetch(new Request("https://ads.example/health"), {});
-  assert.equal(response.status, 200);
-  const body = await response.json();
-  assert.equal(body.ok, true);
-  assert.equal(body.catalogSize, HOUSE_CREATIVE_CATALOG.length);
+test("service and catalog are readable and preserve CORS",async()=>{
+  const instance=createAdServerWorker();
+  const health=await instance.fetch(new Request(base+"/health"),{});
+  assert.equal(health.status,200);
+  assert.equal(health.headers.get("access-control-allow-origin"),"*");
+  assert.equal((await health.json()).catalogSize,HOUSE_CREATIVE_CATALOG.length);
+  const catalog=await instance.fetch(new Request(base+"/catalog"),{});
+  assert.equal(catalog.status,200);
+  assert.ok((await catalog.json()).catalog.some(x=>x.status==="coming-soon"));
+  for(const route of ["/health","/ad","/view","/click","/catalog","/receipts"]){
+    const response=await instance.fetch(new Request(base+route,{method:route==="/view"?"GET":"POST"}),{});
+    assert.equal(response.status,405,route);
+  }
 });
 
-test("JSON responses carry an open CORS header so any house property can fetch cross-origin", async () => {
-  const worker = createAdServerWorker();
-  const response = await worker.fetch(new Request("https://ads.example/health"), {});
-  assert.equal(response.headers.get("access-control-allow-origin"), "*");
-});
-
-test("GET /catalog returns the full catalog including coming-soon entries", async () => {
-  const worker = createAdServerWorker();
-  const response = await worker.fetch(new Request("https://ads.example/catalog"), {});
-  const body = await response.json();
-  assert.equal(body.catalog.length, HOUSE_CREATIVE_CATALOG.length);
-  assert.ok(body.catalog.some((creative) => creative.status === "coming-soon"));
-});
-
-test("GET /ad requires slot and property", async () => {
-  const worker = createAdServerWorker();
-  const response = await worker.fetch(new Request("https://ads.example/ad"), {});
-  assert.equal(response.status, 400);
-});
-
-
-test("GET /ad serves a house creative without consuming KV and emits one aggregate response event",async()=>{
-  const worker=createAdServerWorker();
-  const kv=createFakeKv(),activity=fakeActivity();
-  let writes=0;const put=kv.put;
-  kv.put=async(...args)=>{writes++;return put(...args);};
-  const response=await worker.fetch(new Request("https://ads.example/ad?slot=footer&property=play-561-group"),{AD_RECEIPTS:kv,AD_ACTIVITY:activity});
+test("house creative selection uses aggregate WAE and consumes zero KV writes",async()=>{
+  const kv=fakeKV(),activity=fakeActivity(),instance=worker([house]);
+  const response=await instance.fetch(new Request(base+houseQuery),{AD_RECEIPTS:kv,AD_ACTIVITY:activity});
   assert.equal(response.status,200);
-  const body=await response.json();
-  assert.equal(body.creative.relationship,"house");
-  assert.equal(body.receipt,null);
-  assert.equal(body.receiptStatus,"not-applicable");
+  const data=await response.json();
+  assert.equal(data.creative.id,"our-news");
+  assert.equal(data.creative.relationship,"house");
+  assert.equal(data.activityStatus,"submitted");
+  assert.equal(Object.hasOwn(data,"receipt"),false);
+  assert.deepEqual(kv.writes,[]);
+  assert.deepEqual(activity.points,[{indexes:["game-561"],blobs:["creative-response","footer","our-news","house"],doubles:[1]}]);
+  const body=await (await instance.fetch(new Request(base+"/receipts"),{AD_RECEIPTS:kv})).json();
+  assert.deepEqual(body.entries,[]);
+});
+
+test("house view report uses aggregate WAE with no KV and does not pretend to be a durable impression",async()=>{
+  const activity=fakeActivity(),instance=worker([house]);
+  const view=await instance.fetch(new Request(base+houseView,{method:"POST"}),{AD_ACTIVITY:activity});
+  assert.equal(view.status,202);
+  assert.deepEqual(await view.json(),{status:"submitted",activityStatus:"submitted"});
+  assert.deepEqual(activity.points,[{indexes:["game-561"],blobs:["client-visible-opportunity","footer","our-news","house"],doubles:[1]}]);
+  const unbound=await instance.fetch(new Request(base+houseView,{method:"POST"}),{});
+  assert.equal(unbound.status,202);
+  assert.equal((await unbound.json()).status,"unbound");
+});
+
+test("house redirect stays useful through KV outages without writing a fake paid receipt",async()=>{
+  const kv=fakeKV(),activity=fakeActivity(),instance=worker([house]);
+  kv.put=async()=>{throw Error("quota exhausted");};
+  const redirect=await instance.fetch(new Request(base+houseClick,{redirect:"manual"}),{AD_RECEIPTS:kv,AD_ACTIVITY:activity});
+  assert.equal(redirect.status,302);
+  assert.equal(redirect.headers.get("location"),"https://koios.news/");
+  assert.equal(redirect.headers.get("x-561-receipt-status"),"not-applicable");
+  assert.equal(redirect.headers.get("x-561-activity-status"),"submitted");
+  assert.equal(activity.points[0].blobs[0],"outbound-redirect");
+});
+
+test("paid selection requires a storage binding but never records a premature impression",async()=>{
+  const kv=fakeKV(),activity=fakeActivity(),instance=worker([paid]);
+  assert.equal((await instance.fetch(new Request(base+paidQuery),{})).status,503);
+  const selected=await instance.fetch(new Request(base+paidQuery),{AD_RECEIPTS:kv,AD_ACTIVITY:activity});
+  assert.equal(selected.status,200);
+  const body=await selected.json();
+  assert.equal(body.creative.relationship,"affiliate");
+  assert.equal(body.creative.linkRel,"sponsored nofollow");
+  assert.deepEqual(body.creative.allowedContexts,["science"]);
   assert.equal(body.activityStatus,"submitted");
-  assert.equal(writes,0,"no KV writes are consumed by a house response");
-  assert.deepEqual(activity.points,[{
-    indexes:["play-561-group"],
-    blobs:["creative-response","footer",body.creative.id,"house"],
-    doubles:[1]
-  }]);
-  const receipts=await (await worker.fetch(new Request("https://ads.example/receipts"),{AD_RECEIPTS:kv})).json();
-  assert.deepEqual(receipts.entries,[]);
+  assert.equal(Object.hasOwn(body,"receipt"),false);
+  assert.deepEqual(kv.writes,[]);
+  assert.equal((await instance.fetch(new Request(base+paidQuery.replace("science","sports")),{AD_RECEIPTS:kv})).status,404);
 });
 
-
-test("GET /ad stays productive when unrelated KV quota is exhausted",async()=>{
-  const worker=createAdServerWorker(),kv=createFakeKv(),activity=fakeActivity();
-  let attempted=0;kv.put=async()=>{attempted++;throw new Error("KV quota exceeded");};
-  const response=await worker.fetch(new Request("https://ads.example/ad?slot=footer&property=play-561-group"),{AD_RECEIPTS:kv,AD_ACTIVITY:activity});
-  assert.equal(response.status,200);
-  const result=await response.json();
-  assert.equal(result.receiptStatus,"not-applicable");
-  assert.equal(result.activityStatus,"submitted");
-  assert.equal(attempted,0);
-  assert.equal(activity.points.length,1);
+test("view preflight and paid visible-placement report issue one uniquely addressed KV event",async()=>{
+  const kv=fakeKV(),instance=worker([paid]);
+  const preflight=await instance.fetch(new Request(base+"/view",{method:"OPTIONS"}),{AD_RECEIPTS:kv});
+  assert.equal(preflight.status,204);
+  assert.match(preflight.headers.get("access-control-allow-methods"),/POST/u);
+  const accepted=await instance.fetch(new Request(base+paidView,{method:"POST"}),{AD_RECEIPTS:kv});
+  assert.equal(accepted.status,202);
+  const body=await accepted.json();
+  assert.equal(body.status,"recorded");
+  assert.match(body.id,/^ni:\/\/\/sha-256;/u);
+  assert.equal(kv.writes.length,1);
+  assert.match(kv.writes[0],/^delivery:v2:/u);
+  assert.equal(kv.values.has("chain:head"),false);
+  const page=await(await instance.fetch(new Request(base+"/receipts"),{AD_RECEIPTS:kv})).json();
+  assert.equal(page.entries[0].type,"view");
+  assert.equal(page.entries[0].evidenceKind,"publisher-client-visibility-report");
+  assert.deepEqual(page.entries[0].context,["science"]);
 });
 
-
-test("GET /click redirects an eligible house creative with aggregate activity and no KV write",async()=>{
-  const worker=createAdServerWorker(),kv=createFakeKv(),activity=fakeActivity();
-  const response=await worker.fetch(new Request(
-    "https://ads.example/click?slot=footer&property=play-561-group&creative=koios-news-v1",{redirect:"manual"}),{AD_RECEIPTS:kv,AD_ACTIVITY:activity});
-  assert.equal(response.status,302);
-  assert.equal(response.headers.get("location"),"https://koios.news/");
-  assert.equal(response.headers.get("x-561-receipt-status"),"not-applicable");
-  assert.equal(response.headers.get("x-561-activity-status"),"submitted");
-  assert.deepEqual(activity.points,[{
-    indexes:["play-561-group"],
-    blobs:["outbound-redirect","footer","koios-news-v1","house"],
-    doubles:[1]
-  }]);
-  const receipts=await (await worker.fetch(new Request("https://ads.example/receipts"),{AD_RECEIPTS:kv})).json();
-  assert.deepEqual(receipts.entries,[]);
+test("paid redirect records a distinct event with one KV PUT or refuses",async()=>{
+  const kv=fakeKV(),activity=fakeActivity(),instance=worker([paid]);
+  assert.equal((await instance.fetch(new Request(base+paidClick,{redirect:"manual"}),{})).status,503);
+  const sent=await instance.fetch(new Request(base+paidClick,{redirect:"manual"}),{AD_RECEIPTS:kv,AD_ACTIVITY:activity});
+  assert.equal(sent.status,302);
+  assert.equal(sent.headers.get("location"),paid.href);
+  assert.equal(sent.headers.get("x-561-receipt-status"),"recorded");
+  assert.equal(kv.writes.length,1);
+  assert.equal(activity.points[0].blobs[0],"outbound-redirect");
+  const records=(await(await instance.fetch(new Request(base+"/receipts"),{AD_RECEIPTS:kv})).json()).entries;
+  assert.equal(records[0].type,"click");
+  assert.equal(records[0].evidenceKind,"redirect-request");
 });
 
-test("GET /click refuses inactive, self-promoted and unknown creatives without writing receipts", async () => {
-  const worker = createAdServerWorker();
-  const kv = createFakeKv();
-  for (const url of [
-    "https://ads.example/click?slot=footer&property=play-561-group&creative=house-agent-plugin-v1",
-    "https://ads.example/click?slot=footer&property=koios-news&creative=koios-news-v1",
-    "https://ads.example/click?slot=footer&property=play-561-group&creative=nonexistent",
-  ]) {
-    const response = await worker.fetch(new Request(url, { redirect: "manual" }), { AD_RECEIPTS: kv });
-    assert.equal(response.status, 404, url);
-    assert.equal(response.headers.get("location"), null);
+test("concurrent paid events never overwrite a shared KV sequence",async()=>{
+  const kv=fakeKV(),instance=worker([paid]);
+  const events=await Promise.all(Array.from({length:12},()=>instance.fetch(new Request(base+paidView,{method:"POST"}),{AD_RECEIPTS:kv})));
+  assert.ok(events.every(r=>r.status===202));
+  assert.equal(kv.writes.length,12);
+  assert.equal(new Set(kv.writes).size,12);
+  assert.equal(kv.values.has("chain:head"),false);
+  assert.equal((await(await instance.fetch(new Request(base+"/receipts"),{AD_RECEIPTS:kv})).json()).entries.length,12);
+});
+
+test("paged receipts preserve distinct v2 events and read-only legacy chain",async()=>{
+  const kv=fakeKV(),instance=worker([paid]);
+  await instance.fetch(new Request(base+paidView,{method:"POST"}),{AD_RECEIPTS:kv});
+  await instance.fetch(new Request(base+paidClick),{AD_RECEIPTS:kv});
+  const one=await(await instance.fetch(new Request(base+"/receipts?limit=1"),{AD_RECEIPTS:kv})).json();
+  assert.equal(one.series,"current");
+  assert.equal(one.entries.length,1);
+  assert.equal(one.complete,false);
+  const two=await(await instance.fetch(new Request(base+"/receipts?limit=1&cursor="+encodeURIComponent(one.cursor)),{AD_RECEIPTS:kv})).json();
+  assert.equal(two.entries.length,1);
+  assert.equal(two.complete,true);
+  const original={id:"old",seq:0,type:"impression",occurredAt:"2026-08-31T00:00:00.000Z"};
+  kv.values.set("chain:entry:000000000000",JSON.stringify(original));
+  const writes=kv.writes.length;
+  const legacy=await(await instance.fetch(new Request(base+"/receipts?series=legacy"),{AD_RECEIPTS:kv})).json();
+  assert.deepEqual(legacy.entries,[original]);
+  assert.equal(kv.writes.length,writes);
+  assert.equal((await instance.fetch(new Request(base+"/receipts?series=unknown"),{AD_RECEIPTS:kv})).status,400);
+  assert.equal((await instance.fetch(new Request(base+"/receipts?limit=10000"),{AD_RECEIPTS:kv})).status,400);
+});
+
+test("invalid placement, missing creative, unknown relation and self-promotion never produce events",async()=>{
+  const kv=fakeKV(),instance=worker([house,paid]);
+  const refused=[
+    ["/ad?slot=footer%20bad&property=publisher","GET",400],
+    ["/ad?slot=footer&property=%0A","GET",400],
+    ["/view?slot=footer&property=publisher&creative=sponsor&context=sports","POST",404],
+    ["/view?slot=footer&property=publisher&creative=unknown","POST",404],
+    ["/view?slot=footer&property=koios-news&creative=our-news","POST",404],
+    ["/click?slot=footer&property=publisher&creative=sponsor","GET",404],
+    ["/click?slot=footer&property=koios-news&creative=our-news","GET",404]
+  ];
+  for(const [path,method,status] of refused){
+    assert.equal((await instance.fetch(new Request(base+path,{method}),{AD_RECEIPTS:kv})).status,status,path);
   }
-  const { entries } = await (await worker.fetch(new Request("https://ads.example/receipts"), { AD_RECEIPTS: kv })).json();
-  assert.deepEqual(entries, [], "refused clicks must never enter the receipt chain");
+  assert.deepEqual(kv.writes,[]);
 });
 
-test("GET /click enforces slot/property matching and still redirects for eligible campaigns", async () => {
-  const worker = createAdServerWorker({ catalog: [
-    { id: "approved", status: "live", relationship: "house", property: "promoted", slots: ["footer"], properties: ["publisher-ok"], href: "https://example.com/" },
-  ] });
-  for (const url of [
-    "https://ads.example/click?slot=sidebar&property=publisher-ok&creative=approved",
-    "https://ads.example/click?slot=footer&property=publisher-other&creative=approved",
-  ]) {
-    const response = await worker.fetch(new Request(url, { redirect: "manual" }), {});
-    assert.equal(response.status, 404, url);
-    assert.equal(response.headers.get("location"), null);
-  }
-  const ok = await worker.fetch(new Request("https://ads.example/click?slot=footer&property=publisher-ok&creative=approved", { redirect: "manual" }), {});
-  assert.equal(ok.status, 302);
-  assert.equal(ok.headers.get("location"), "https://example.com/");
-});
-
-
-test("GET /click keeps eligible house links useful when KV storage is down",async()=>{
-  const worker=createAdServerWorker(),kv=createFakeKv(),activity=fakeActivity();
-  let attempted=0;kv.put=async()=>{attempted++;throw new Error("KV quota exceeded");};
-  const response=await worker.fetch(new Request(
-    "https://ads.example/click?slot=footer&property=play-561-group&creative=koios-news-v1",
-    {redirect:"manual"}),{AD_RECEIPTS:kv,AD_ACTIVITY:activity});
-  assert.equal(response.status,302);
-  assert.equal(response.headers.get("location"),"https://koios.news/");
-  assert.equal(response.headers.get("x-561-receipt-status"),"not-applicable");
-  assert.equal(attempted,0);
-  assert.equal(activity.points.length,1);
-});
-
-
-test("paid campaigns fail closed under KV quota and resume only after UTC reset",async()=>{
-  let clock=Date.parse("2026-10-13T23:59:00Z");
-  const reset=Date.parse("2026-10-14T00:00:00Z");
-  const worker=createAdServerWorker({catalog:[PAID],nowMs:()=>clock});
-  const kv=createFakeKv(),activity=fakeActivity(),normalPut=kv.put;
-  const attempts=[];
-  kv.put=async(key,value)=>{
-    attempts.push(key);
-    if(clock<reset){const e=new Error("KV write quota");e.status=429;throw e;}
-    return normalPut(key,value);
-  };
-  const oldError=console.error,errors=[];console.error=message=>errors.push(message);
+test("paid quota hold does not interrupt house delivery and resets at midnight UTC",async()=>{
+  let now=Date.parse("2026-10-19T23:59:00.000Z");
+  const reset=Date.parse("2026-10-20T00:00:00.000Z");
+  const instance=worker([house,paid],()=>now),kv=fakeKV(),put=kv.put,attempts=[];
+  kv.put=async(key,value)=>{attempts.push(key);if(now<reset){const e=Error("KV quota token-secret 429");e.status=429;throw e;}return put(key,value);};
+  const before=console.error,logs=[];console.error=v=>logs.push(v);
   try{
-    const first=await worker.fetch(new Request("https://ads.example"+paidAd),{AD_RECEIPTS:kv,AD_ACTIVITY:activity});
-    assert.equal(first.status,503);
-    assert.equal((await first.json()).creative,undefined);
+    assert.equal((await instance.fetch(new Request(base+paidView,{method:"POST"}),{AD_RECEIPTS:kv})).status,503);
     assert.equal(attempts.length,1);
-    assert.equal(activity.points.length,0,"refused paid response produces no success event");
-    const held=await worker.fetch(new Request("https://ads.example"+paidAd),{AD_RECEIPTS:kv});
-    assert.equal(held.status,503);
-    assert.equal(attempts.length,1,"isolate does not repeat known exhausted KV writes");
-    const denied=await worker.fetch(new Request("https://ads.example"+paidClick,{redirect:"manual"}),{AD_RECEIPTS:kv});
-    assert.equal(denied.status,503);
-    assert.equal(denied.headers.get("location"),null);
-    assert.equal(errors.length,1);
-    assert.equal(JSON.parse(errors[0]).errorClass,"kv-write-quota-exhausted");
-    clock=reset;
-    const after=await worker.fetch(new Request("https://ads.example"+paidAd),{AD_RECEIPTS:kv,AD_ACTIVITY:activity});
-    assert.equal(after.status,200);
-    const body=await after.json();
-    assert.equal(body.receiptStatus,"recorded");
-    assert.equal(body.activityStatus,"submitted");
-    assert.equal(attempts.length,3,"paid response uses the two original custody writes");
-    assert.equal(activity.points.length,1);
-    const redirect=await worker.fetch(new Request("https://ads.example"+paidClick,{redirect:"manual"}),{AD_RECEIPTS:kv,AD_ACTIVITY:activity});
-    assert.equal(redirect.status,302);
-    assert.equal(redirect.headers.get("x-561-receipt-status"),"recorded");
-    assert.equal(attempts.length,5);
-  }finally{console.error=oldError;}
+    assert.equal((await instance.fetch(new Request(base+paidView,{method:"POST"}),{AD_RECEIPTS:kv})).status,503);
+    assert.equal((await instance.fetch(new Request(base+paidQuery),{AD_RECEIPTS:kv})).status,503);
+    assert.equal((await instance.fetch(new Request(base+paidClick),{AD_RECEIPTS:kv})).status,503);
+    assert.equal(attempts.length,1);
+    assert.equal((await instance.fetch(new Request(base+houseQuery),{AD_RECEIPTS:kv})).status,200);
+    assert.equal((await instance.fetch(new Request(base+houseClick),{AD_RECEIPTS:kv})).status,302);
+    assert.equal(logs.length,1);
+    assert.equal(JSON.parse(logs[0]).errorClass,"kv-write-quota-exhausted");
+    assert.doesNotMatch(logs[0],/token-secret/u);
+    now=reset;
+    assert.equal((await instance.fetch(new Request(base+paidView,{method:"POST"}),{AD_RECEIPTS:kv})).status,202);
+    assert.equal(attempts.length,2);
+  }finally{console.error=before;}
 });
 
-
-test("paid custody failures remain retryable, redacted and do not serve creatives",async()=>{
-  const worker=createAdServerWorker({catalog:[PAID],nowMs:()=>Date.parse("2026-10-13T20:00:00Z")});
-  const kv=createFakeKv();
-  let attempts=0;
-  kv.put=async()=>{attempts++;throw new Error("transport fault secret=PRIVATE_NOT_A_TOKEN");};
-  const oldError=console.error,errors=[];console.error=message=>errors.push(message);
+test("unknown KV errors can retry without leaking provider details or advertising a paid view",async()=>{
+  const kv=fakeKV(),instance=worker([paid]),logs=[],before=console.error;
+  let count=0;kv.put=async()=>{count++;throw Error("secret=private transport");};
+  console.error=message=>logs.push(message);
   try{
     for(let i=0;i<2;i++){
-      const response=await worker.fetch(new Request("https://ads.example"+paidAd),{AD_RECEIPTS:kv});
-      assert.equal(response.status,503);
-      assert.equal((await response.json()).creative,undefined);
+      assert.equal((await instance.fetch(new Request(base+paidView,{method:"POST"}),{AD_RECEIPTS:kv})).status,503);
     }
-    assert.equal(attempts,2);
-    assert.equal(errors.length,2);
-    assert.equal(JSON.parse(errors[0]).errorClass,"receipt-storage-error");
-    assert.doesNotMatch(errors.join(" "),/PRIVATE_NOT_A_TOKEN|secret=/u);
-  }finally{console.error=oldError;}
+    assert.equal(count,2);
+    assert.equal(logs.length,2);
+    assert.doesNotMatch(logs.join(" "),/secret=private/u);
+  }finally{console.error=before;}
 });
 
-
-test("clock admission is explicit; unbound house aggregates cannot claim durable receipts",async()=>{
-  assert.throws(()=>createAdServerWorker({nowMs:null}),/nowMs must provide/u);
-  const worker=createAdServerWorker({nowMs:()=>Date.parse("2026-10-13T23:59:50Z")});
-  const result=await(await worker.fetch(new Request("https://ads.example/ad?slot=footer&property=play-561-group"),{})).json();
-  assert.equal(result.receiptStatus,"not-applicable");
-  assert.equal(result.activityStatus,"unbound");
-});
-
-test("unknown route returns 404", async () => {
-  const worker = createAdServerWorker();
-  const response = await worker.fetch(new Request("https://ads.example/nowhere"), {});
-  assert.equal(response.status, 404);
-});
-
-
-test("paid offers require accountable custody and enforce context, terms and exact expiry",async()=>{
-  let clock=Date.parse("2026-10-17T23:00:00Z");
-  const campaign={...PAID,expiresAt:"2026-10-18T00:00:00Z"};
-  const worker=createAdServerWorker({catalog:[campaign],nowMs:()=>clock});
-  const noLedger=await worker.fetch(new Request("https://ads.example"+paidAd),{});
-  assert.equal(noLedger.status,503,"paid offers never serve without a receipt owner");
-  const kv=createFakeKv(),activity=fakeActivity();
-  const before=await worker.fetch(new Request("https://ads.example"+paidAd),{AD_RECEIPTS:kv,AD_ACTIVITY:activity});
-  assert.equal(before.status,200);
-  const body=await before.json();
-  assert.equal(body.receiptStatus,"recorded");
-  assert.equal(body.creative.relationship,"affiliate");
-  assert.equal(body.creative.disclosure,campaign.disclosure);
-  assert.equal(body.creative.linkRel,"sponsored nofollow");
-  assert.deepEqual(body.creative.allowedContexts,["finance"]);
-  assert.equal(body.creative.eligibility,campaign.eligibility);
-  assert.equal(body.creative.riskNotice,campaign.riskNotice);
-  assert.equal(body.creative.expiresAt,campaign.expiresAt);
-  assert.equal((await worker.fetch(new Request("https://ads.example/ad?slot=footer&property=publisher&context=sport"),{AD_RECEIPTS:kv})).status,404);
-  const noContext=await worker.fetch(new Request("https://ads.example/click?slot=footer&property=publisher&creative=paid",{redirect:"manual"}),{AD_RECEIPTS:kv});
-  assert.equal(noContext.status,404);
-  const redirect=await worker.fetch(new Request("https://ads.example"+paidClick,{redirect:"manual"}),{AD_RECEIPTS:kv,AD_ACTIVITY:activity});
-  assert.equal(redirect.status,302);
-  assert.equal(redirect.headers.get("location"),campaign.href);
-  assert.equal(redirect.headers.get("x-561-receipt-status"),"recorded");
-  assert.equal(activity.points.length,2);
-  clock=Date.parse("2026-10-18T00:00:00Z");
-  assert.equal((await worker.fetch(new Request("https://ads.example"+paidAd),{AD_RECEIPTS:kv})).status,404);
-  const expired=await worker.fetch(new Request("https://ads.example"+paidClick,{redirect:"manual"}),{AD_RECEIPTS:kv});
-  assert.equal(expired.status,404);
-  assert.equal(expired.headers.get("location"),null);
-});
-
-
-test("aggregate sink errors do not break house service or assert durable activity",async()=>{
-  const worker=createAdServerWorker();
-  const activity={writeDataPoint(){throw new Error("provider not ready secret=never-log");}};
-  const response=await worker.fetch(new Request("https://ads.example/ad?slot=footer&property=play-561-group"),{AD_ACTIVITY:activity});
+test("aggregate sink failures never prevent a first-party creative from displaying",async()=>{
+  const instance=worker([house]),activity={writeDataPoint(){throw Error("private token");}};
+  const response=await instance.fetch(new Request(base+houseQuery),{AD_ACTIVITY:activity});
   assert.equal(response.status,200);
-  const body=await response.json();
-  assert.equal(body.activityStatus,"unavailable");
-  assert.equal(body.receiptStatus,"not-applicable");
+  assert.equal((await response.json()).activityStatus,"unavailable");
+  const v=await instance.fetch(new Request(base+houseView,{method:"POST"}),{AD_ACTIVITY:activity});
+  assert.equal(v.status,202);
+  assert.equal((await v.json()).activityStatus,"unavailable");
 });
 
-test("bounded placement coordinates refuse malformed properties before recording",async()=>{
-  const worker=createAdServerWorker(),activity=fakeActivity();
-  for(const target of [
-    "/ad?slot=footer&property="+("x".repeat(100)),
-    "/ad?slot=footer&property=%0A",
-    "/ad?slot=footer%20illegal&property=koios-news",
-    "/click?slot=footer&property=%0A&creative=koios-news-v1"
-  ]) {
-    const response=await worker.fetch(new Request("https://ads.example"+target),{AD_ACTIVITY:activity});
-    assert.equal(response.status,400,target);
-  }
-  assert.equal(activity.points.length,0);
-});
-
-
-test("the original receipt HTTP route has bounded cursors and refuses absent rows",async()=>{
-  const worker=createAdServerWorker({catalog:[PAID],nowMs:()=>Date.parse("2026-10-17T12:00:00Z")});
-  const kv=createFakeKv();
-  for(let i=0;i<105;i++){
-    const response=await worker.fetch(new Request("https://ads.example"+paidAd),{AD_RECEIPTS:kv});
-    assert.equal(response.status,200);
-  }
-  const first=await(await worker.fetch(new Request("https://ads.example/receipts?since=0"),{AD_RECEIPTS:kv})).json();
-  assert.equal(first.entries.length,100);
-  assert.equal(first.nextSince,100);
-  assert.equal(first.complete,false);
-  const second=await(await worker.fetch(new Request("https://ads.example/receipts?since=100"),{AD_RECEIPTS:kv})).json();
-  assert.equal(second.entries.length,5);
-  assert.equal(second.complete,true);
-  assert.equal(second.head.seq,104);
-  assert.equal((await worker.fetch(new Request("https://ads.example/receipts?since=-1"),{AD_RECEIPTS:kv})).status,400);
-  assert.equal((await worker.fetch(new Request("https://ads.example/receipts?since=1.1"),{AD_RECEIPTS:kv})).status,400);
-  const corrupt={get:async(key,type)=>key==="chain:head"?{seq:3,id:"broken"}:null, list:kv.list};
-  assert.equal((await worker.fetch(new Request("https://ads.example/receipts?since=0"),{AD_RECEIPTS:corrupt})).status,503);
+test("expiry refuses paid selection, view and redirects at the exact boundary",async()=>{
+  let now=Date.parse("2026-10-19T15:00:00.000Z");
+  const expiresAt="2026-10-19T15:01:00.000Z";
+  const instance=worker([{...paid,expiresAt}],()=>now),kv=fakeKV();
+  assert.equal((await instance.fetch(new Request(base+paidQuery),{AD_RECEIPTS:kv})).status,200);
+  now=Date.parse(expiresAt);
+  assert.equal((await instance.fetch(new Request(base+paidQuery),{AD_RECEIPTS:kv})).status,404);
+  assert.equal((await instance.fetch(new Request(base+paidView,{method:"POST"}),{AD_RECEIPTS:kv})).status,404);
+  assert.equal((await instance.fetch(new Request(base+paidClick),{AD_RECEIPTS:kv})).status,404);
 });

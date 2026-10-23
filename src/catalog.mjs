@@ -12,7 +12,7 @@
  * @property {string[]} properties Allowed publisher property identities.
  * @property {string[]} slots Allowed inventory slots.
  * @property {string[]} [contexts] Preferred publisher-declared page topics for house ads.
- * @property {string[]} [allowedContexts] Required page topics for third-party campaigns.
+ * @property {string[]} [allowedContexts] Required page topics for paid campaigns and optionally tightly targeted first-party campaigns; legacy house ads without it remain broadly eligible.
  * @property {string} title
  * @property {string} [body]
  * @property {string} href

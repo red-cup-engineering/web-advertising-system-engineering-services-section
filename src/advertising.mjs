@@ -28,6 +28,13 @@ export function listEligibleCreatives({ catalog, slot, property, context = [], n
           !Number.isFinite(Date.parse(creative.expiresAt)) ||
           Date.parse(creative.expiresAt) <= now.getTime()) return false;
     }
+    // An opt-in topic gate for targeted house marketing. Preserve all legacy
+    // house ads without this field, but never rotate a specialized science
+    // appeal onto an unrelated page or a context-free publisher.
+    if (creative.relationship === "house" && creative.allowedContexts !== undefined &&
+        (!Array.isArray(creative.allowedContexts) || creative.allowedContexts.length === 0 ||
+         !creative.allowedContexts.some(v => typeof v === "string" && wanted.has(v))))
+      return false;
     if (creative.relationship !== "house") {
       if (typeof creative.expiresAt !== "string" ||
           typeof creative.disclosure !== "string" || !creative.disclosure.trim()) return false;

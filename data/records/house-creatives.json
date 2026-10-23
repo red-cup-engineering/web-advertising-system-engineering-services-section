@@ -362,6 +362,104 @@
       "href": "https://buy.stripe.com/28E28s1b4gJcb2Y3Io5EY02",
       "imageAlt": null,
       "relationship": "house"
+    },
+    {
+      "id": "open-work-science-20261022",
+      "status": "live",
+      "slots": [
+        "afterArticle",
+        "footer",
+        "*"
+      ],
+      "properties": [
+        "koios-news"
+      ],
+      "property": "561-open-work",
+      "contexts": [
+        "science",
+        "technology"
+      ],
+      "allowedContexts": [
+        "science",
+        "technology"
+      ],
+      "tags": [
+        "house",
+        "open-science",
+        "curiosity",
+        "patronage"
+      ],
+      "title": "Four strange projects. All the source.",
+      "body": "A Lean proof carrier, agent attention tools and more: inspect what a tiny independent research group actually publishes. Curious people can help keep it open.",
+      "href": "https://github.com/561-group/.github/blob/main/OPEN-WORK.md",
+      "imageAlt": null,
+      "relationship": "house"
+    },
+    {
+      "id": "open-work-engineering-20261022",
+      "status": "live",
+      "slots": [
+        "afterArticle",
+        "footer",
+        "*"
+      ],
+      "properties": [
+        "koios-news"
+      ],
+      "property": "561-open-work",
+      "contexts": [
+        "technology",
+        "ai",
+        "business-markets"
+      ],
+      "allowedContexts": [
+        "technology",
+        "ai",
+        "business-markets"
+      ],
+      "tags": [
+        "house",
+        "foss",
+        "agents",
+        "patronage"
+      ],
+      "title": "The code is the pitch deck.",
+      "body": "No investment round. Read the actual open-source storefront and social publishing code, then decide whether this is a future worth supporting.",
+      "href": "https://github.com/561-group/.github/blob/main/OPEN-WORK.md",
+      "imageAlt": null,
+      "relationship": "house"
+    },
+    {
+      "id": "open-work-playful-20261022",
+      "status": "live",
+      "slots": [
+        "belowGame",
+        "footer",
+        "*"
+      ],
+      "properties": [
+        "play-561-group"
+      ],
+      "property": "561-open-work",
+      "contexts": [
+        "games",
+        "culture-entertainment"
+      ],
+      "allowedContexts": [
+        "games",
+        "culture-entertainment"
+      ],
+      "tags": [
+        "house",
+        "patronage",
+        "open-source",
+        "games"
+      ],
+      "title": "Found a wonderfully weird corner of the internet?",
+      "body": "This group makes games, software and serious research in public. You can look under the hood, share a rabbit hole, or send a tip. No ownership required.",
+      "href": "https://github.com/561-group/.github/blob/main/OPEN-WORK.md",
+      "imageAlt": null,
+      "relationship": "house"
     }
   ]
 }

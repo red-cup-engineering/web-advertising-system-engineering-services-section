@@ -137,3 +137,43 @@ test("existing house-ad selector carries an actual sustaining support offer to t
   }
   assert.ok(!listEligibleCreatives({catalog:[{...campaign,status:"coming-soon"}],slot:"afterArticle",property:"koios-news",context:["science"],now}).length);
 });
+
+test("published public-proof campaign reaches relevant house slots and refuses unrelated contexts",async()=>{
+ const {HOUSE_CREATIVE_CATALOG}=await import("../src/catalog.mjs");
+ const ids=["open-work-science-20261022","open-work-engineering-20261022","open-work-playful-20261022"];
+ const creatives=ids.map(id=>HOUSE_CREATIVE_CATALOG.find(row=>row.id===id));
+ assert.equal(creatives.every(Boolean),true);
+ const now=new Date("2026-10-22T12:00:00.000Z");
+ for(const c of creatives){
+  assert.equal(c.relationship,"house");
+  assert.equal(c.status,"live");
+  assert.equal(c.href,"https://github.com/561-group/.github/blob/main/OPEN-WORK.md");
+  assert.ok(c.allowedContexts.length>0);
+  assert.deepEqual(c.contexts.filter(topic=>c.allowedContexts.includes(topic)),c.contexts);
+  assert.ok(c.body.length>=70);
+ }
+ const scientific={slot:"afterArticle",property:"koios-news",context:["science"],now};
+ const technical={slot:"afterArticle",property:"koios-news",context:["ai"],now};
+ const recreational={slot:"belowGame",property:"play-561-group",context:["games"],now};
+ assert.deepEqual(listEligibleCreatives({catalog:creatives,...scientific}).map(x=>x.id),[ids[0]]);
+ assert.deepEqual(listEligibleCreatives({catalog:creatives,...technical}).map(x=>x.id),[ids[1]]);
+ assert.deepEqual(listEligibleCreatives({catalog:creatives,...recreational}).map(x=>x.id),[ids[2]]);
+ for(const [property,slot,context] of [
+  ["koios-news","afterArticle",["romance"]],
+  ["koios-news","afterArticle",[]],
+  ["play-561-group","belowGame",["finance"]],
+  ["play-561-group","belowGame",[]],
+  ["another-merchant","afterArticle",["science"]]
+ ])assert.deepEqual(listEligibleCreatives({catalog:creatives,slot,property,context,now}),[]);
+ for(const surface of [scientific,technical,recreational]){
+  const chosen=selectCreative({catalog:creatives,...surface});
+  assert.ok(ids.includes(chosen.creative.id));
+  assert.match(chosen.decision.reason,/context-match/);
+ }
+ // Legacy broad house creatives remain eligible when no explicit context gate exists.
+ assert.deepEqual(listEligibleCreatives({catalog:[{...creatives[0],allowedContexts:undefined}],...{...scientific,context:[]}}).map(x=>x.id),[ids[0]]);
+ for(const invalid of [[],{},["unrelated"]]){
+  const changed={...creatives[0],allowedContexts:invalid};
+  assert.equal(listEligibleCreatives({catalog:[changed],...scientific}).length,0);
+ }
+});

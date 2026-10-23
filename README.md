@@ -33,6 +33,13 @@ The house advertising engine, `@red-cup-engineering/web-advertising-system-engin
 - `sites/house-ads-server` is the Cloudflare Worker that deploys it
   (`ads.561.group`).
 
+
+## Evidence-first open-work marketing experiment (2026-10-22)
+
+Three existing-rail **house** creatives in `data/records/house-creatives.json` lead to a public [proof-rich open-work story](https://github.com/561-group/.github/blob/main/OPEN-WORK.md). Their topic choices are genuinely different: science/formal methods, engineering/agent infrastructure, and playful curiosity. The new optional `allowedContexts` field bounds **first-party** creatives as well as sponsored inventory: a science appeal does not rotate into an unrelated article or an untyped page, while ordinary house creatives without the opt-in gate retain their historical behavior. No behavioral tracking or visitor profile is required.
+
+`test/advertising.test.mjs` exercises the unchanged original selector against the actual campaign, two existing publisher identifiers, relevant/irrelevant/missing contexts and legacy behavior. The creative click leads first to inspectable public work, not an unexplained payment screen. Attribution of **house placement opportunities** is not a count of impressions, humans, open-source users or Stripe customers. Our original [supplier release blocker](https://github.com/red-cup-engineering/web-advertising-system-engineering-services-section/issues/3) and [host receiving blocker](https://github.com/red-cup-engineering/house-ads-server-site/issues/1) still govern package release and deployment. A merged catalog is **not** evidence these creatives have been seen by anyone.
+
 ## Current delivery boundary (0.3.0-dev.1)
 
 - `GET /ad` selects an eligible creative. An ad response is not a human view or a billable impression. House responses use only optional aggregate Workers Analytics Engine activity, with zero KV writes. Paid campaigns require an available receipt sink but do not write until the actual reported view or redirect.

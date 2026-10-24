@@ -177,3 +177,67 @@ test("published public-proof campaign reaches relevant house slots and refuses u
   assert.equal(listEligibleCreatives({catalog:[changed],...scientific}).length,0);
  }
 });
+
+
+test("paid contextual service refuses impossible calendar/secret/local supplier destinations before publication", () => {
+  const now=new Date("2026-10-23T12:00:00Z");
+  const sponsored={
+    id:"example-sponsored",status:"live",relationship:"sponsored",
+    property:"merchant",slots:["afterArticle"],properties:["koios-news"],
+    disclosure:"Sponsored by the named seller",
+    allowedContexts:["science"],expiresAt:"2027-03-01T12:00:00Z",
+    href:"https://supplier.example.org/offer"
+  };
+  const eligible=creative => listEligibleCreatives({
+    catalog:[creative],slot:"afterArticle",property:"koios-news",
+    context:["science"],now
+  });
+  assert.deepEqual(eligible(sponsored).map(x=>x.id),[sponsored.id]);
+  for(const source of [
+    {...sponsored,expiresAt:"2027-02-30T12:00:00Z"},
+    {...sponsored,expiresAt:"2027-03-01T24:00:00Z"},
+    {...sponsored,expiresAt:"2027-03-01T12:00:00+25:00"},
+    {...sponsored,href:"https://127.0.0.1/private"},
+    {...sponsored,href:"https://localhost/private"},
+    {...sponsored,href:"https://merchant.internal/private"},
+    {...sponsored,href:"https://supplier.example.org/offer?token=secret"},
+    {...sponsored,href:"https://supplier.example.org/offer?access_token=secret"},
+    {...sponsored,href:"https://user:password@supplier.example.org/offer"},
+    {...sponsored,allowedContexts:["science","science"]},
+    {...sponsored,allowedContexts:["science"," not-a-topic"]},
+    {...sponsored,allowedContexts:[]}
+  ]) {
+    assert.deepEqual(eligible(source),[],
+      "an unqualified paid campaign must not be eligible for a placement receipt");
+    assert.equal(selectCreative({
+      catalog:[source],slot:"afterArticle",property:"koios-news",context:["science"],now
+    }),null,"the selector must not issue a creative that admission refuses");
+  }
+  assert.equal(eligible({...sponsored,expiresAt:"2027-03-01T18:00:00+06:00"}).length,1,
+    "legitimate non-UTC documented expiry stays admissible");
+  assert.equal(eligible({...sponsored,expiresAt:"2026-10-23T12:00:00Z"}).length,0,
+    "a correctly formatted expiration still stops at the exact instant");
+});
+
+test("existing nonpaid house placements retain their context rotation after paid admission hardens", () => {
+  const now=new Date("2026-10-23T12:00:00Z");
+  const house={
+    id:"house",status:"live",relationship:"house",property:"open-work",
+    slots:["afterArticle"],properties:["koios-news"],contexts:["science"],
+    href:"https://github.com/561-group/.github/blob/main/OPEN-WORK.md"
+  };
+  const paid={
+    ...house,id:"sponsored",relationship:"sponsored",property:"external",
+    allowedContexts:["science"],expiresAt:"2027-02-30T12:00:00Z",
+    disclosure:"Sponsored",href:"https://external.example.org/offer"
+  };
+  const eligible=listEligibleCreatives({
+    catalog:[house,paid],slot:"afterArticle",property:"koios-news",context:["science"],now
+  });
+  assert.deepEqual(eligible.map(x=>x.id),["house"]);
+  const selected=selectCreative({
+    catalog:[house,paid],slot:"afterArticle",property:"koios-news",context:["science"],now
+  });
+  assert.equal(selected?.creative?.id,"house");
+  assert.match(selected?.decision?.reason,/day-rotation/u);
+});

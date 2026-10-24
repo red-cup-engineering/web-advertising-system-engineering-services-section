@@ -35,7 +35,7 @@ function campaignExpiry(value, now) {
  * embedded credential, or secret-bearing URL. No personal click tracking or
  * permission to contact a merchant follows from accepting a destination.
  */
-function publicPaidDestination(href) {
+function publicCreativeDestination(href) {
   if (typeof href!=="string" || href.length>2048 || href.trim()!==href ||
       /\s/u.test(href)) return false;
   try {
@@ -71,6 +71,12 @@ export function listEligibleCreatives({ catalog, slot, property, context = [], n
     // An opt-in topic gate for targeted house marketing. Preserve all legacy
     // house ads without this field, but never rotate a specialized science
     // appeal onto an unrelated page or a context-free publisher.
+    // Existing first-party catalog entries also contain clickable public
+    // destinations. A malformed/credential-bearing live house link must not
+    // become a served or redirected user acquisition CTA. Legacy bare pure
+    // selector fixtures without destinations retain their prior use.
+    if (creative.relationship === "house" && creative.href !== undefined &&
+        !publicCreativeDestination(creative.href)) return false;
     if (creative.relationship === "house" && creative.allowedContexts !== undefined &&
         (!Array.isArray(creative.allowedContexts) || creative.allowedContexts.length === 0 ||
          !creative.allowedContexts.some(v => typeof v === "string" && wanted.has(v))))
@@ -78,7 +84,7 @@ export function listEligibleCreatives({ catalog, slot, property, context = [], n
     if (creative.relationship !== "house") {
       if (typeof creative.expiresAt !== "string" ||
           typeof creative.disclosure !== "string" || !creative.disclosure.trim()) return false;
-      if (!publicPaidDestination(creative.href)) return false;
+      if (!publicCreativeDestination(creative.href)) return false;
       // Paid inventory must have a bounded, typed and unambiguous publisher
       // topic policy. Unchecked extra contexts are not licensed placements.
       if (!Array.isArray(creative.allowedContexts) ||

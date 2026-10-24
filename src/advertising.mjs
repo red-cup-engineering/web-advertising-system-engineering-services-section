@@ -31,9 +31,10 @@ function campaignExpiry(value, now) {
   return new Date(instant+offset*60_000).toISOString().slice(0,19)===match[1];
 }
 
-/** A paid redirect may reach a real public merchant, never a local host,
- * embedded credential, or secret-bearing URL. No personal click tracking or
- * permission to contact a merchant follows from accepting a destination.
+/** A creative with a declared link may reach a public source/merchant,
+ * never a local host, embedded credential or secret-bearing URL. Both house
+ * acquisition and paid placements share this source guard. URL syntax grants
+ * no seller rights, domain custody, campaign budget or user contact consent.
  */
 function publicCreativeDestination(href) {
   if (typeof href!=="string" || href.length>2048 || href.trim()!==href ||

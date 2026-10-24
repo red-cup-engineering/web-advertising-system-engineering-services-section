@@ -287,3 +287,52 @@ test("quota-held paid campaigns yield to house promotions and recover at UTC res
     assert.equal((await revived.json()).creative.id,"sponsor");
   } finally {console.error=prior;}
 });
+
+
+test("worker refuses unsafe house redirects before delivery, view and click event counting",async()=>{
+  const unsafe=[
+    "http://shop.example.org/private",
+    "https://localhost/private",
+    "https://127.0.0.1/private",
+    "https://publisher:secret@merchant.example.org/offer",
+    "https://merchant.example.org/offer?session=secret",
+    "javascript:alert(1)",
+  ];
+  for(const href of unsafe){
+    const bad={...house,href},kv=fakeKV(),activity=fakeActivity(),instance=worker([bad]);
+    const a=await instance.fetch(new Request(base+houseQuery),{AD_RECEIPTS:kv,AD_ACTIVITY:activity});
+    const v=await instance.fetch(new Request(base+houseView,{method:"POST"}),{AD_RECEIPTS:kv,AD_ACTIVITY:activity});
+    const c=await instance.fetch(new Request(base+houseClick,{redirect:"manual"}),{AD_RECEIPTS:kv,AD_ACTIVITY:activity});
+    assert.equal(a.status,404,href);
+    assert.equal(v.status,404,href);
+    assert.equal(c.status,404,href);
+    assert.equal(c.headers.get("location"),null);
+    assert.deepEqual(kv.writes,[],"forbidden house inventory never becomes receipt work");
+    assert.deepEqual(activity.points,[],"no false response/view/redirect metric");
+  }
+  const good=worker([house]),click=await good.fetch(new Request(base+houseClick,{redirect:"manual"}),{});
+  assert.equal(click.status,302);
+  assert.equal(click.headers.get("location"),house.href);
+});
+
+test("worker refuses malformed sponsored source expiry/targets before KV mutation",async()=>{
+  const hazards=[
+    {...paid,expiresAt:"2099-02-30T23:59:59Z"},
+    {...paid,expiresAt:"2099-12-31T24:00:00Z"},
+    {...paid,href:"https://127.0.0.1/offer"},
+    {...paid,href:"https://example.org/offer?access_token=secret"},
+    {...paid,allowedContexts:["science","science"]},
+    {...paid,allowedContexts:["science"," not-licensed"]},
+  ];
+  for(const bad of hazards){
+    const kv=fakeKV(),activity=fakeActivity(),instance=worker([bad]);
+    assert.equal((await instance.fetch(new Request(base+paidQuery),{AD_RECEIPTS:kv,AD_ACTIVITY:activity})).status,404);
+    assert.equal((await instance.fetch(new Request(base+paidView,{method:"POST"}),{AD_RECEIPTS:kv,AD_ACTIVITY:activity})).status,404);
+    assert.equal((await instance.fetch(new Request(base+paidClick,{redirect:"manual"}),{AD_RECEIPTS:kv,AD_ACTIVITY:activity})).status,404);
+    assert.deepEqual(kv.writes,[]);
+    assert.deepEqual(activity.points,[]);
+  }
+  const healthy=worker([paid]),kv=fakeKV();
+  assert.equal((await healthy.fetch(new Request(base+paidQuery),{AD_RECEIPTS:kv})).status,200);
+  assert.deepEqual(kv.writes,[],"eligible selection is not an impression or billed view");
+});

@@ -10,6 +10,49 @@ import { hashSeed } from "@red-cup-engineering/computer-data-engineering-service
  * @returns {import("./catalog.mjs").AdCreative[]} Eligible creatives, in catalog order.
  */
 const pageContexts = context => new Set((Array.isArray(context) ? context : [context]).filter(v => typeof v === "string" && v.trim()));
+
+/** Real source-calendar second: Date.parse alone normalizes 24:00 and
+ * impossible February dates into different instants, so cannot establish
+ * a licensed campaign's declared expiry. Accept UTC and numeric offsets;
+ * preserve fractional seconds without silently rewriting the source wall
+ * clock. This is syntactic expiry admission, NOT a signed campaign contract.
+ */
+function campaignExpiry(value, now) {
+  if (typeof value !== "string") return false;
+  const match = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?:\.\d+)?(Z|[+-]\d{2}:\d{2})$/u.exec(value);
+  if (!match || +match[1].slice(0,4)===0 || +match[1].slice(11,13)>23 ||
+      +match[1].slice(14,16)>59 || +match[1].slice(17,19)>59) return false;
+  const instant = Date.parse(value);
+  if (!Number.isFinite(instant) || instant<=now.getTime()) return false;
+  const zone=match[2];
+  const offset=zone==="Z" ? 0 :
+    (zone[0]==="+"?1:-1)*(Number(zone.slice(1,3))*60+Number(zone.slice(4,6)));
+  if (zone!=="Z" && (Number(zone.slice(1,3))>23 || Number(zone.slice(4,6))>59)) return false;
+  return new Date(instant+offset*60_000).toISOString().slice(0,19)===match[1];
+}
+
+/** A paid redirect may reach a real public merchant, never a local host,
+ * embedded credential, or secret-bearing URL. No personal click tracking or
+ * permission to contact a merchant follows from accepting a destination.
+ */
+function publicPaidDestination(href) {
+  if (typeof href!=="string" || href.length>2048 || href.trim()!==href ||
+      /\s/u.test(href)) return false;
+  try {
+    const target=new URL(href);
+    const host=target.hostname.toLowerCase();
+    return target.protocol==="https:" && !target.username && !target.password &&
+      host.includes(".") && !host.endsWith(".") && host!=="localhost" &&
+      !host.endsWith(".local") && !host.endsWith(".internal") &&
+      !/^\d+\.\d+\.\d+\.\d+$/u.test(host) && !host.startsWith("[") &&
+      ![...target.searchParams.keys()].some(key =>
+        /^(?:token|secret|password|api[-_]?key|access[-_]?token|auth(?:entication|orization)?|session|signature|sig)$/iu.test(key));
+  } catch { return false; }
+}
+
+const contextName = v => typeof v === "string" &&
+  /^[a-z][a-z0-9-]{0,63}$/u.test(v);
+
 export function listEligibleCreatives({ catalog, slot, property, context = [], now = new Date() }) {
   if (!Array.isArray(catalog)) throw new TypeError("listEligibleCreatives requires a catalog array");
   if (!slot) throw new TypeError("listEligibleCreatives requires a slot");
@@ -23,11 +66,8 @@ export function listEligibleCreatives({ catalog, slot, property, context = [], n
     if (!["house", "sponsored", "affiliate"].includes(creative.relationship)) return false;
     // An undocumented or expired offer cannot be advertised or clicked, even if
     // an operator accidentally leaves its catalog status at "live".
-    if (creative.expiresAt !== undefined) {
-      if (typeof creative.expiresAt !== "string" ||
-          !Number.isFinite(Date.parse(creative.expiresAt)) ||
-          Date.parse(creative.expiresAt) <= now.getTime()) return false;
-    }
+    if (creative.expiresAt !== undefined &&
+        !campaignExpiry(creative.expiresAt, now)) return false;
     // An opt-in topic gate for targeted house marketing. Preserve all legacy
     // house ads without this field, but never rotate a specialized science
     // appeal onto an unrelated page or a context-free publisher.
@@ -38,14 +78,14 @@ export function listEligibleCreatives({ catalog, slot, property, context = [], n
     if (creative.relationship !== "house") {
       if (typeof creative.expiresAt !== "string" ||
           typeof creative.disclosure !== "string" || !creative.disclosure.trim()) return false;
-      try {
-        const target = new URL(creative.href);
-        if (target.protocol !== "https:" || target.username || target.password) return false;
-      } catch { return false; }
-      // The publisher's page topic is an admission condition, not a weak
-      // preference for commercial placements.
+      if (!publicPaidDestination(creative.href)) return false;
+      // Paid inventory must have a bounded, typed and unambiguous publisher
+      // topic policy. Unchecked extra contexts are not licensed placements.
       if (!Array.isArray(creative.allowedContexts) ||
-          !creative.allowedContexts.some(v => typeof v === "string" && wanted.has(v))) return false;
+          creative.allowedContexts.length===0 || creative.allowedContexts.length>16 ||
+          creative.allowedContexts.some(v => !contextName(v)) ||
+          new Set(creative.allowedContexts).size!==creative.allowedContexts.length ||
+          !creative.allowedContexts.some(v => wanted.has(v))) return false;
       // Publisher-rendered referral ads require both offer qualifications and
       // material risk information. Do not record an impression for an offer
       // the receiving publisher must correctly refuse to display.

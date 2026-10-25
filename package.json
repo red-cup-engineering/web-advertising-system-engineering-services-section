@@ -1,6 +1,6 @@
 {
   "name": "@red-cup-engineering/web-advertising-system-engineering-services-section",
-  "version": "0.3.0-dev.1",
+  "version": "0.3.0-dev.2",
   "type": "module",
   "description": "Contextual advertising: cheap aggregate house activity and content-addressed publisher-view/redirect events for receipt-bearing campaigns, with no reader profiling.",
   "files": [

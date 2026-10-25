@@ -1,0 +1,690 @@
+{
+  "kind": "advertising.native-source-receiving/v1",
+  "date": "2026-10-25",
+  "repository": "red-cup-engineering/web-advertising-system-engineering-services-section",
+  "pr": 5,
+  "originalPrHead": "033722bbac05b5c11fb62bb9e84277caee8616b4",
+  "receivedMain": "f0e461e4b07a8e37cc160dcf909005f797bb9475",
+  "receivedMainTree": "921856e1bea3fb1a5fe8dd51e2fd4ee48211d04e",
+  "preservedCreativeCatalogGitBlob": "cf6eb8df27348010d1ca8d7936e6a5e5d7a9c277",
+  "runtime": {
+    "node": "v24.22.1",
+    "platform": "linux",
+    "architecture": "x64"
+  },
+  "nativeProviders": [
+    {
+      "name": "@red-cup-engineering/computer-data-engineering-services-section",
+      "selectedVersion": "0.5.1",
+      "resolved": "https://registry.561.group/@red-cup-engineering/computer-data-engineering-services-section/-/computer-data-engineering-services-section-0.5.1.tgz",
+      "integrity": "sha512-eRtSnIFPZhMQwfQ0Gt1jv35NXck+6/V5igHNfIvgro/C1eVbIWMTREOGdU62e9KBzc8FmfDBmZ9WpB5O5X6jNQ==",
+      "gitHead": "65e8f7dbde2cff190caf73a2b8141f1ee5f99082"
+    },
+    {
+      "name": "@red-cup-engineering/json-services-section",
+      "selectedVersion": "0.4.1",
+      "resolved": "https://registry.561.group/@red-cup-engineering/json-services-section/-/json-services-section-0.4.1.tgz",
+      "integrity": "sha512-m8WXUbLI1KxAJdeabJ27PyrF8HxjuhFMqVEouANXAo0eFhEQsNUPGVgeISfpqBqYai10B45F2NG5muu3iMKUSA==",
+      "gitHead": "5874c33d6bee0323ea0a17094f18c9dc20024d25"
+    },
+    {
+      "name": "@red-cup-engineering/uri-services-section",
+      "selectedVersion": "0.1.2",
+      "resolved": "https://registry.561.group/@red-cup-engineering/uri-services-section/-/uri-services-section-0.1.2.tgz",
+      "integrity": "sha512-jcChl/6edkCJ6o8N2dHuAOQH+JZGAL/v01MzsgT/UdeyYTe1sC36fjpgxIlPx1LAi5K3h+OquuWPjXa9yE7cJw==",
+      "gitHead": "d804134c75a940611df310e9c22a6e364605e48b"
+    },
+    {
+      "name": "@red-cup-engineering/semiotic-eavt-services-section",
+      "selectedVersion": "0.3.0",
+      "resolved": "https://registry.561.group/@red-cup-engineering/semiotic-eavt-services-section/-/semiotic-eavt-services-section-0.3.0.tgz",
+      "integrity": "sha512-W2+huJy8wX1gbl/J7Nqbs0kZ+zeZ20+RMqGHGoOAy/soQnHMmE1qbzZneDehs2zdFMfz71+/X+s9YphSXuSFig==",
+      "gitHead": "1d9bda86525bf39067308c34fb3eb6dfdc9589b6"
+    }
+  ],
+  "providerResolution": [
+    {
+      "path": "node_modules/@cto.af/wtf8",
+      "version": "0.0.6",
+      "resolved": "https://registry.561.group/@cto.af/wtf8/-/wtf8-0.0.6.tgz",
+      "integrity": "sha512-xp/zbWLXuh2WBxi9tIc+Jep7BAwLu8ETTI8xN68ks10bxOBMISs/jcu9DBEkOeGXLaTKUbA0Y2Ficx/jmmPABg=="
+    },
+    {
+      "path": "node_modules/@hyperjump/browser",
+      "version": "1.5.1",
+      "resolved": "https://registry.561.group/@hyperjump/browser/-/browser-1.5.1.tgz",
+      "integrity": "sha512-dMuhTjbQLQbF5IcsWP1kEfI7B0QuH/j9RaaV8y9orfLg1ZRcLMRRGUWMKUQ7Ox7I5Fi4x/+XdxdjgaMY8WRhYA=="
+    },
+    {
+      "path": "node_modules/@hyperjump/json-pointer",
+      "version": "1.1.3",
+      "resolved": "https://registry.561.group/@hyperjump/json-pointer/-/json-pointer-1.1.3.tgz",
+      "integrity": "sha512-GVSs+wzefSO5VOEVMuOz118MDJrJtMdm8h+2vlghzMG/5QpboTSQ12gaMKvGQo7S4oPMw9rCyFWNAJ9DUEdA5Q=="
+    },
+    {
+      "path": "node_modules/@hyperjump/json-schema",
+      "version": "1.18.0",
+      "resolved": "https://registry.561.group/@hyperjump/json-schema/-/json-schema-1.18.0.tgz",
+      "integrity": "sha512-YPLJsCosW6pHhulKrFogUsl1WxQVRy+fY0pROt66FDFygjIWZkMxXyiy8HLRR1JKeAd5OE6NSZs0NVjSBNwb2Q=="
+    },
+    {
+      "path": "node_modules/@hyperjump/json-schema-formats",
+      "version": "1.1.0",
+      "resolved": "https://registry.561.group/@hyperjump/json-schema-formats/-/json-schema-formats-1.1.0.tgz",
+      "integrity": "sha512-vLMIOwMThlgWgPJBV39Ds7kaTaygK0+UxjvQShTmKB8rRy8HXq472jnHP8/uaik+77HDx2M+W5Bvzhq6zFc2zQ=="
+    },
+    {
+      "path": "node_modules/@hyperjump/pact",
+      "version": "1.4.0",
+      "resolved": "https://registry.561.group/@hyperjump/pact/-/pact-1.4.0.tgz",
+      "integrity": "sha512-01Q7VY6BcAkp9W31Fv+ciiZycxZHGlR2N6ba9BifgyclHYHdbaZgITo0U6QMhYRlem4k8pf8J31/tApxvqAz8A=="
+    },
+    {
+      "path": "node_modules/@hyperjump/uri",
+      "version": "1.3.9",
+      "resolved": "https://registry.561.group/@hyperjump/uri/-/uri-1.3.9.tgz",
+      "integrity": "sha512-cxG5vyIdx3gUb/OQD/FDruQQcGNzF2aKTXWJ6LzlAC1kh97YZQSRsF3hL274xlTDJ1nWGJGRtknlW6ZpU3Ch+A=="
+    },
+    {
+      "path": "node_modules/@red-cup-engineering/cbor-services-section",
+      "version": "0.1.1",
+      "resolved": "https://registry.561.group/@red-cup-engineering/cbor-services-section/-/cbor-services-section-0.1.1.tgz",
+      "integrity": "sha512-uUsHbXjvaFihU5JavrJpbG44Hdcg2r7zADeWgM6DO6YeIcSsAo4FrYh35pwzAqLpqQbQJrIOsDVzrccyWURu5g=="
+    },
+    {
+      "path": "node_modules/@red-cup-engineering/cbor-services-section/node_modules/@red-cup-engineering/json-services-section",
+      "version": "0.4.0",
+      "resolved": "https://registry.561.group/@red-cup-engineering/json-services-section/-/json-services-section-0.4.0.tgz",
+      "integrity": "sha512-WjToogRIj9qq5VaPQ52Lao8v/rXhSX7umi+rEn0Xysnfv6qAv77llXe68wboADrpQK2micSBS3DSGJWd5CoZkg=="
+    },
+    {
+      "path": "node_modules/@red-cup-engineering/cbor-services-section/node_modules/@red-cup-engineering/uri-services-section",
+      "version": "0.1.1",
+      "resolved": "https://registry.561.group/@red-cup-engineering/uri-services-section/-/uri-services-section-0.1.1.tgz",
+      "integrity": "sha512-y5Ipia5hTOLT/0lzEX+DAC/qtfT7ey17jNT/2dh7r0fqromCUxUOQiJOYaapXXWqe79T1sCEmICjukFuLvizmw=="
+    },
+    {
+      "path": "node_modules/@red-cup-engineering/computer-content-address-engineering-services-section",
+      "version": "0.2.0",
+      "resolved": "https://registry.561.group/@red-cup-engineering/computer-content-address-engineering-services-section/-/computer-content-address-engineering-services-section-0.2.0.tgz",
+      "integrity": "sha512-wpD6OqU0x1OXUVX59VyYYMnU11KEqSQVg8kqmLNKpkbilNKYCOaxIwpgbVf+iDWO34tjOT4uew3ukXYQSvKF9w=="
+    },
+    {
+      "path": "node_modules/@red-cup-engineering/computer-content-address-engineering-services-section/node_modules/@red-cup-engineering/json-services-section",
+      "version": "0.4.0",
+      "resolved": "https://registry.561.group/@red-cup-engineering/json-services-section/-/json-services-section-0.4.0.tgz",
+      "integrity": "sha512-WjToogRIj9qq5VaPQ52Lao8v/rXhSX7umi+rEn0Xysnfv6qAv77llXe68wboADrpQK2micSBS3DSGJWd5CoZkg=="
+    },
+    {
+      "path": "node_modules/@red-cup-engineering/computer-content-address-engineering-services-section/node_modules/@red-cup-engineering/uri-services-section",
+      "version": "0.1.1",
+      "resolved": "https://registry.561.group/@red-cup-engineering/uri-services-section/-/uri-services-section-0.1.1.tgz",
+      "integrity": "sha512-y5Ipia5hTOLT/0lzEX+DAC/qtfT7ey17jNT/2dh7r0fqromCUxUOQiJOYaapXXWqe79T1sCEmICjukFuLvizmw=="
+    },
+    {
+      "path": "node_modules/@red-cup-engineering/computer-content-engineering-services-section",
+      "version": "0.1.0",
+      "resolved": "https://registry.561.group/@red-cup-engineering/computer-content-engineering-services-section/-/computer-content-engineering-services-section-0.1.0.tgz",
+      "integrity": "sha512-1giJOIHoiK1PmaBi1mjAANU2SqiIilvdwV9XaAV/9p2OVLn754GEYKsqlDSKAVO3kVExLHhfvcAhJk9DzlAyNQ=="
+    },
+    {
+      "path": "node_modules/@red-cup-engineering/computer-content-engineering-services-section/node_modules/@red-cup-engineering/computer-data-engineering-services-section",
+      "version": "0.2.0",
+      "resolved": "https://registry.561.group/@red-cup-engineering/computer-data-engineering-services-section/-/computer-data-engineering-services-section-0.2.0.tgz",
+      "integrity": "sha512-fHoL1GrjGExKOuVosgLfUl0HK6WVQ1EZcOrR4LkC6XN6dUBbvOtA7n+mupaqvSSErWdDENL6SCPiiApgCaUOTQ=="
+    },
+    {
+      "path": "node_modules/@red-cup-engineering/computer-content-engineering-services-section/node_modules/@red-cup-engineering/json-services-section",
+      "version": "0.4.0",
+      "resolved": "https://registry.561.group/@red-cup-engineering/json-services-section/-/json-services-section-0.4.0.tgz",
+      "integrity": "sha512-WjToogRIj9qq5VaPQ52Lao8v/rXhSX7umi+rEn0Xysnfv6qAv77llXe68wboADrpQK2micSBS3DSGJWd5CoZkg=="
+    },
+    {
+      "path": "node_modules/@red-cup-engineering/computer-content-engineering-services-section/node_modules/@red-cup-engineering/uri-services-section",
+      "version": "0.1.1",
+      "resolved": "https://registry.561.group/@red-cup-engineering/uri-services-section/-/uri-services-section-0.1.1.tgz",
+      "integrity": "sha512-y5Ipia5hTOLT/0lzEX+DAC/qtfT7ey17jNT/2dh7r0fqromCUxUOQiJOYaapXXWqe79T1sCEmICjukFuLvizmw=="
+    },
+    {
+      "path": "node_modules/@red-cup-engineering/computer-data-engineering-services-section",
+      "version": "0.5.1",
+      "resolved": "https://registry.561.group/@red-cup-engineering/computer-data-engineering-services-section/-/computer-data-engineering-services-section-0.5.1.tgz",
+      "integrity": "sha512-eRtSnIFPZhMQwfQ0Gt1jv35NXck+6/V5igHNfIvgro/C1eVbIWMTREOGdU62e9KBzc8FmfDBmZ9WpB5O5X6jNQ=="
+    },
+    {
+      "path": "node_modules/@red-cup-engineering/computer-data-engineering-services-section/node_modules/@red-cup-engineering/json-services-section",
+      "version": "0.4.0",
+      "resolved": "https://registry.561.group/@red-cup-engineering/json-services-section/-/json-services-section-0.4.0.tgz",
+      "integrity": "sha512-WjToogRIj9qq5VaPQ52Lao8v/rXhSX7umi+rEn0Xysnfv6qAv77llXe68wboADrpQK2micSBS3DSGJWd5CoZkg=="
+    },
+    {
+      "path": "node_modules/@red-cup-engineering/computer-data-engineering-services-section/node_modules/@red-cup-engineering/uri-services-section",
+      "version": "0.1.1",
+      "resolved": "https://registry.561.group/@red-cup-engineering/uri-services-section/-/uri-services-section-0.1.1.tgz",
+      "integrity": "sha512-y5Ipia5hTOLT/0lzEX+DAC/qtfT7ey17jNT/2dh7r0fqromCUxUOQiJOYaapXXWqe79T1sCEmICjukFuLvizmw=="
+    },
+    {
+      "path": "node_modules/@red-cup-engineering/computer-file-engineering-services-section",
+      "version": "0.5.0",
+      "resolved": "https://registry.561.group/@red-cup-engineering/computer-file-engineering-services-section/-/computer-file-engineering-services-section-0.5.0.tgz",
+      "integrity": "sha512-vLIh3QlBzg45NyuBWZDgciWwfMq+Y2yIXqwXL6kLxUne0xvFPGum7LoZeonS3fIwaMI4KI81zCGvvBvPjuN4AA=="
+    },
+    {
+      "path": "node_modules/@red-cup-engineering/computer-file-engineering-services-section/node_modules/@red-cup-engineering/computer-data-engineering-services-section",
+      "version": "0.2.0",
+      "resolved": "https://registry.561.group/@red-cup-engineering/computer-data-engineering-services-section/-/computer-data-engineering-services-section-0.2.0.tgz",
+      "integrity": "sha512-fHoL1GrjGExKOuVosgLfUl0HK6WVQ1EZcOrR4LkC6XN6dUBbvOtA7n+mupaqvSSErWdDENL6SCPiiApgCaUOTQ=="
+    },
+    {
+      "path": "node_modules/@red-cup-engineering/computer-file-engineering-services-section/node_modules/@red-cup-engineering/json-services-section",
+      "version": "0.4.0",
+      "resolved": "https://registry.561.group/@red-cup-engineering/json-services-section/-/json-services-section-0.4.0.tgz",
+      "integrity": "sha512-WjToogRIj9qq5VaPQ52Lao8v/rXhSX7umi+rEn0Xysnfv6qAv77llXe68wboADrpQK2micSBS3DSGJWd5CoZkg=="
+    },
+    {
+      "path": "node_modules/@red-cup-engineering/computer-file-engineering-services-section/node_modules/@red-cup-engineering/signcell",
+      "version": "0.1.0",
+      "resolved": "https://registry.561.group/@red-cup-engineering/signcell/-/signcell-0.1.0.tgz",
+      "integrity": "sha512-eYqt+s09XLX4CcG/kqmIo1n1coKSFOoIN6pR2G20lKd1rhBJt8yuyx5KKKlZfAyeJei2QWNxZRtz3DPQLIqohQ=="
+    },
+    {
+      "path": "node_modules/@red-cup-engineering/computer-file-engineering-services-section/node_modules/@red-cup-engineering/uri-services-section",
+      "version": "0.1.1",
+      "resolved": "https://registry.561.group/@red-cup-engineering/uri-services-section/-/uri-services-section-0.1.1.tgz",
+      "integrity": "sha512-y5Ipia5hTOLT/0lzEX+DAC/qtfT7ey17jNT/2dh7r0fqromCUxUOQiJOYaapXXWqe79T1sCEmICjukFuLvizmw=="
+    },
+    {
+      "path": "node_modules/@red-cup-engineering/computer-filepath-engineering-services-section",
+      "version": "0.1.0",
+      "resolved": "https://registry.561.group/@red-cup-engineering/computer-filepath-engineering-services-section/-/computer-filepath-engineering-services-section-0.1.0.tgz",
+      "integrity": "sha512-q5+4/ufvitEzoDzQbFblRjN1R3gAiRj2D13TllGmjr9r5XcEBrEXmnwcFy0q5L5bimAaqR5KYeFTUILUFJKQPg=="
+    },
+    {
+      "path": "node_modules/@red-cup-engineering/computer-filepath-engineering-services-section/node_modules/@red-cup-engineering/json-services-section",
+      "version": "0.4.0",
+      "resolved": "https://registry.561.group/@red-cup-engineering/json-services-section/-/json-services-section-0.4.0.tgz",
+      "integrity": "sha512-WjToogRIj9qq5VaPQ52Lao8v/rXhSX7umi+rEn0Xysnfv6qAv77llXe68wboADrpQK2micSBS3DSGJWd5CoZkg=="
+    },
+    {
+      "path": "node_modules/@red-cup-engineering/computer-text-content-engineering-services-section",
+      "version": "0.1.0",
+      "resolved": "https://registry.561.group/@red-cup-engineering/computer-text-content-engineering-services-section/-/computer-text-content-engineering-services-section-0.1.0.tgz",
+      "integrity": "sha512-1sR6cPKd754th7xbQWaM2FFZ9MrOF1Sxkt+RLlVN0/QpvNkMZigUFLOTaQyIL+jzn8SGbD5cNZwUwCzXtVjjzg=="
+    },
+    {
+      "path": "node_modules/@red-cup-engineering/computer-text-content-engineering-services-section/node_modules/@red-cup-engineering/json-services-section",
+      "version": "0.4.0",
+      "resolved": "https://registry.561.group/@red-cup-engineering/json-services-section/-/json-services-section-0.4.0.tgz",
+      "integrity": "sha512-WjToogRIj9qq5VaPQ52Lao8v/rXhSX7umi+rEn0Xysnfv6qAv77llXe68wboADrpQK2micSBS3DSGJWd5CoZkg=="
+    },
+    {
+      "path": "node_modules/@red-cup-engineering/cryptographic-computer-data-engineering-services-section",
+      "version": "0.3.1",
+      "resolved": "https://registry.561.group/@red-cup-engineering/cryptographic-computer-data-engineering-services-section/-/cryptographic-computer-data-engineering-services-section-0.3.1.tgz",
+      "integrity": "sha512-5a5fFFLCntjl4f61TGxcUOVGwCyKhjup/k0f4irnsXA/BC5alsZzeij0NPf6NzAW8kAOQ9u72L7tg8L/2ZuhSA=="
+    },
+    {
+      "path": "node_modules/@red-cup-engineering/cryptographic-computer-data-engineering-services-section/node_modules/@red-cup-engineering/json-services-section",
+      "version": "0.4.0",
+      "resolved": "https://registry.561.group/@red-cup-engineering/json-services-section/-/json-services-section-0.4.0.tgz",
+      "integrity": "sha512-WjToogRIj9qq5VaPQ52Lao8v/rXhSX7umi+rEn0Xysnfv6qAv77llXe68wboADrpQK2micSBS3DSGJWd5CoZkg=="
+    },
+    {
+      "path": "node_modules/@red-cup-engineering/datom-services-section",
+      "version": "0.1.1",
+      "resolved": "https://registry.561.group/@red-cup-engineering/datom-services-section/-/datom-services-section-0.1.1.tgz",
+      "integrity": "sha512-cFlwLarY57Mambliub6qgECuL079bDMSd31TSC3aKPvrbzwZjC8CmbQqTa4tPKgYXg4fOBQ4CqyA+sAsyg6u3w=="
+    },
+    {
+      "path": "node_modules/@red-cup-engineering/datom-services-section/node_modules/@red-cup-engineering/json-services-section",
+      "version": "0.4.0",
+      "resolved": "https://registry.561.group/@red-cup-engineering/json-services-section/-/json-services-section-0.4.0.tgz",
+      "integrity": "sha512-WjToogRIj9qq5VaPQ52Lao8v/rXhSX7umi+rEn0Xysnfv6qAv77llXe68wboADrpQK2micSBS3DSGJWd5CoZkg=="
+    },
+    {
+      "path": "node_modules/@red-cup-engineering/eavt-services-section",
+      "version": "0.11.1",
+      "resolved": "https://registry.561.group/@red-cup-engineering/eavt-services-section/-/eavt-services-section-0.11.1.tgz",
+      "integrity": "sha512-Zb940BR43MPvZsXkhlt48eaOrFbHEfa3r4pxB/kPyyQtMdGHx1IzyXc+1pZd34cQaNyqX6iQKK6RzB8AvO7Zow=="
+    },
+    {
+      "path": "node_modules/@red-cup-engineering/eavt-services-section/node_modules/@red-cup-engineering/computer-data-engineering-services-section",
+      "version": "0.2.0",
+      "resolved": "https://registry.561.group/@red-cup-engineering/computer-data-engineering-services-section/-/computer-data-engineering-services-section-0.2.0.tgz",
+      "integrity": "sha512-fHoL1GrjGExKOuVosgLfUl0HK6WVQ1EZcOrR4LkC6XN6dUBbvOtA7n+mupaqvSSErWdDENL6SCPiiApgCaUOTQ=="
+    },
+    {
+      "path": "node_modules/@red-cup-engineering/eavt-services-section/node_modules/@red-cup-engineering/computer-file-engineering-services-section",
+      "version": "0.4.0",
+      "resolved": "https://registry.561.group/@red-cup-engineering/computer-file-engineering-services-section/-/computer-file-engineering-services-section-0.4.0.tgz",
+      "integrity": "sha512-if1u0Rg+LYzi3Gq+ZPoqQTmwHoaX/5wHJB0egstMLQ/2V8PzEwvihQCXVx8TJIEoDpZcIGYeFwT1rGJDWOoGgQ=="
+    },
+    {
+      "path": "node_modules/@red-cup-engineering/eavt-services-section/node_modules/@red-cup-engineering/computer-file-engineering-services-section/node_modules/@red-cup-engineering/signcell",
+      "version": "0.1.0",
+      "resolved": "https://registry.561.group/@red-cup-engineering/signcell/-/signcell-0.1.0.tgz",
+      "integrity": "sha512-eYqt+s09XLX4CcG/kqmIo1n1coKSFOoIN6pR2G20lKd1rhBJt8yuyx5KKKlZfAyeJei2QWNxZRtz3DPQLIqohQ=="
+    },
+    {
+      "path": "node_modules/@red-cup-engineering/eavt-services-section/node_modules/@red-cup-engineering/json-services-section",
+      "version": "0.4.0",
+      "resolved": "https://registry.561.group/@red-cup-engineering/json-services-section/-/json-services-section-0.4.0.tgz",
+      "integrity": "sha512-WjToogRIj9qq5VaPQ52Lao8v/rXhSX7umi+rEn0Xysnfv6qAv77llXe68wboADrpQK2micSBS3DSGJWd5CoZkg=="
+    },
+    {
+      "path": "node_modules/@red-cup-engineering/eavt-services-section/node_modules/@red-cup-engineering/signcell",
+      "version": "0.4.0",
+      "resolved": "https://registry.561.group/@red-cup-engineering/signcell/-/signcell-0.4.0.tgz",
+      "integrity": "sha512-VfGyU46S1y0QDlcgYLSYnKZgVbL7Ocn8oWDf2Gw3iYTI8Qgvm2IF2X+oTLu7iOJyWrwlLXnfdXqMROO1Ll4h/Q=="
+    },
+    {
+      "path": "node_modules/@red-cup-engineering/eavt-services-section/node_modules/@red-cup-engineering/uri-services-section",
+      "version": "0.1.1",
+      "resolved": "https://registry.561.group/@red-cup-engineering/uri-services-section/-/uri-services-section-0.1.1.tgz",
+      "integrity": "sha512-y5Ipia5hTOLT/0lzEX+DAC/qtfT7ey17jNT/2dh7r0fqromCUxUOQiJOYaapXXWqe79T1sCEmICjukFuLvizmw=="
+    },
+    {
+      "path": "node_modules/@red-cup-engineering/exact-number-data-service",
+      "version": "0.1.1",
+      "resolved": "https://registry.561.group/@red-cup-engineering/exact-number-data-service/-/exact-number-data-service-0.1.1.tgz",
+      "integrity": "sha512-D54dcxY7eqK23lktqbv0HjjNNroY2clDJ1K5TW7pWN2NBeDOGbS53yGv7sAYfToPn3YH8pKrpBVAB1URg8kcuA=="
+    },
+    {
+      "path": "node_modules/@red-cup-engineering/json-schema-services-section",
+      "version": "0.5.0",
+      "resolved": "https://registry.561.group/@red-cup-engineering/json-schema-services-section/-/json-schema-services-section-0.5.0.tgz",
+      "integrity": "sha512-kqq0KOLrbORJ0sGInJJn1rV22tqsu3FOMg5mi0RsARDYUH8O8S+LUCIW9NZwX79OLASBtTYKjOq5Zk22tv3kbw=="
+    },
+    {
+      "path": "node_modules/@red-cup-engineering/json-schema-services-section/node_modules/@red-cup-engineering/computer-data-engineering-services-section",
+      "version": "0.2.0",
+      "resolved": "https://registry.561.group/@red-cup-engineering/computer-data-engineering-services-section/-/computer-data-engineering-services-section-0.2.0.tgz",
+      "integrity": "sha512-fHoL1GrjGExKOuVosgLfUl0HK6WVQ1EZcOrR4LkC6XN6dUBbvOtA7n+mupaqvSSErWdDENL6SCPiiApgCaUOTQ=="
+    },
+    {
+      "path": "node_modules/@red-cup-engineering/json-schema-services-section/node_modules/@red-cup-engineering/json-services-section",
+      "version": "0.4.0",
+      "resolved": "https://registry.561.group/@red-cup-engineering/json-services-section/-/json-services-section-0.4.0.tgz",
+      "integrity": "sha512-WjToogRIj9qq5VaPQ52Lao8v/rXhSX7umi+rEn0Xysnfv6qAv77llXe68wboADrpQK2micSBS3DSGJWd5CoZkg=="
+    },
+    {
+      "path": "node_modules/@red-cup-engineering/json-schema-services-section/node_modules/@red-cup-engineering/uri-services-section",
+      "version": "0.1.1",
+      "resolved": "https://registry.561.group/@red-cup-engineering/uri-services-section/-/uri-services-section-0.1.1.tgz",
+      "integrity": "sha512-y5Ipia5hTOLT/0lzEX+DAC/qtfT7ey17jNT/2dh7r0fqromCUxUOQiJOYaapXXWqe79T1sCEmICjukFuLvizmw=="
+    },
+    {
+      "path": "node_modules/@red-cup-engineering/json-services-section",
+      "version": "0.4.1",
+      "resolved": "https://registry.561.group/@red-cup-engineering/json-services-section/-/json-services-section-0.4.1.tgz",
+      "integrity": "sha512-m8WXUbLI1KxAJdeabJ27PyrF8HxjuhFMqVEouANXAo0eFhEQsNUPGVgeISfpqBqYai10B45F2NG5muu3iMKUSA=="
+    },
+    {
+      "path": "node_modules/@red-cup-engineering/jsonl-services-section",
+      "version": "0.1.0",
+      "resolved": "https://registry.561.group/@red-cup-engineering/jsonl-services-section/-/jsonl-services-section-0.1.0.tgz",
+      "integrity": "sha512-2EM/pJ6Gwh9VqO+OPaZ5orMUW2hDn2ogjDQNi6syoSeV0fMC2nnQiNaZiEzG1L0sEJpVIA8OLnlyMg6DIbJiIA=="
+    },
+    {
+      "path": "node_modules/@red-cup-engineering/jsonl-services-section/node_modules/@red-cup-engineering/json-services-section",
+      "version": "0.4.0",
+      "resolved": "https://registry.561.group/@red-cup-engineering/json-services-section/-/json-services-section-0.4.0.tgz",
+      "integrity": "sha512-WjToogRIj9qq5VaPQ52Lao8v/rXhSX7umi+rEn0Xysnfv6qAv77llXe68wboADrpQK2micSBS3DSGJWd5CoZkg=="
+    },
+    {
+      "path": "node_modules/@red-cup-engineering/metrologic",
+      "version": "0.4.0",
+      "resolved": "https://registry.561.group/@red-cup-engineering/metrologic/-/metrologic-0.4.0.tgz",
+      "integrity": "sha512-GiPwFJbSA3zsBKAHDcHQvrFlg/WXaNOpc1EMU6xl6h0Pwnz/ROSB/2sl0MfTuZCcbvuX2vCd7ectdbl1Ugi65A=="
+    },
+    {
+      "path": "node_modules/@red-cup-engineering/metrologic/node_modules/@red-cup-engineering/computer-data-engineering-services-section",
+      "version": "0.2.0",
+      "resolved": "https://registry.561.group/@red-cup-engineering/computer-data-engineering-services-section/-/computer-data-engineering-services-section-0.2.0.tgz",
+      "integrity": "sha512-fHoL1GrjGExKOuVosgLfUl0HK6WVQ1EZcOrR4LkC6XN6dUBbvOtA7n+mupaqvSSErWdDENL6SCPiiApgCaUOTQ=="
+    },
+    {
+      "path": "node_modules/@red-cup-engineering/metrologic/node_modules/@red-cup-engineering/json-services-section",
+      "version": "0.4.0",
+      "resolved": "https://registry.561.group/@red-cup-engineering/json-services-section/-/json-services-section-0.4.0.tgz",
+      "integrity": "sha512-WjToogRIj9qq5VaPQ52Lao8v/rXhSX7umi+rEn0Xysnfv6qAv77llXe68wboADrpQK2micSBS3DSGJWd5CoZkg=="
+    },
+    {
+      "path": "node_modules/@red-cup-engineering/metrologic/node_modules/@red-cup-engineering/uri-services-section",
+      "version": "0.1.1",
+      "resolved": "https://registry.561.group/@red-cup-engineering/uri-services-section/-/uri-services-section-0.1.1.tgz",
+      "integrity": "sha512-y5Ipia5hTOLT/0lzEX+DAC/qtfT7ey17jNT/2dh7r0fqromCUxUOQiJOYaapXXWqe79T1sCEmICjukFuLvizmw=="
+    },
+    {
+      "path": "node_modules/@red-cup-engineering/semiotic-content-address",
+      "version": "0.1.0",
+      "resolved": "https://registry.561.group/@red-cup-engineering/semiotic-content-address/-/semiotic-content-address-0.1.0.tgz",
+      "integrity": "sha512-5+Rap5Ya8biH9nRzVl4HadfIuNomBYfxdDtV7Ly35wvTPrEYrglXZRuXY9Mg0vGQXruTrlBzxaAiYQUXvgyIaQ=="
+    },
+    {
+      "path": "node_modules/@red-cup-engineering/semiotic-content-address/node_modules/@red-cup-engineering/json-services-section",
+      "version": "0.4.0",
+      "resolved": "https://registry.561.group/@red-cup-engineering/json-services-section/-/json-services-section-0.4.0.tgz",
+      "integrity": "sha512-WjToogRIj9qq5VaPQ52Lao8v/rXhSX7umi+rEn0Xysnfv6qAv77llXe68wboADrpQK2micSBS3DSGJWd5CoZkg=="
+    },
+    {
+      "path": "node_modules/@red-cup-engineering/semiotic-content-address/node_modules/@red-cup-engineering/uri-services-section",
+      "version": "0.1.1",
+      "resolved": "https://registry.561.group/@red-cup-engineering/uri-services-section/-/uri-services-section-0.1.1.tgz",
+      "integrity": "sha512-y5Ipia5hTOLT/0lzEX+DAC/qtfT7ey17jNT/2dh7r0fqromCUxUOQiJOYaapXXWqe79T1sCEmICjukFuLvizmw=="
+    },
+    {
+      "path": "node_modules/@red-cup-engineering/semiotic-eavt-services-section",
+      "version": "0.3.0",
+      "resolved": "https://registry.561.group/@red-cup-engineering/semiotic-eavt-services-section/-/semiotic-eavt-services-section-0.3.0.tgz",
+      "integrity": "sha512-W2+huJy8wX1gbl/J7Nqbs0kZ+zeZ20+RMqGHGoOAy/soQnHMmE1qbzZneDehs2zdFMfz71+/X+s9YphSXuSFig=="
+    },
+    {
+      "path": "node_modules/@red-cup-engineering/semiotic-eavt-services-section/node_modules/@red-cup-engineering/computer-data-engineering-services-section",
+      "version": "0.2.0",
+      "resolved": "https://registry.561.group/@red-cup-engineering/computer-data-engineering-services-section/-/computer-data-engineering-services-section-0.2.0.tgz",
+      "integrity": "sha512-fHoL1GrjGExKOuVosgLfUl0HK6WVQ1EZcOrR4LkC6XN6dUBbvOtA7n+mupaqvSSErWdDENL6SCPiiApgCaUOTQ=="
+    },
+    {
+      "path": "node_modules/@red-cup-engineering/semiotic-eavt-services-section/node_modules/@red-cup-engineering/json-services-section",
+      "version": "0.4.0",
+      "resolved": "https://registry.561.group/@red-cup-engineering/json-services-section/-/json-services-section-0.4.0.tgz",
+      "integrity": "sha512-WjToogRIj9qq5VaPQ52Lao8v/rXhSX7umi+rEn0Xysnfv6qAv77llXe68wboADrpQK2micSBS3DSGJWd5CoZkg=="
+    },
+    {
+      "path": "node_modules/@red-cup-engineering/semiotic-eavt-services-section/node_modules/@red-cup-engineering/uri-services-section",
+      "version": "0.1.1",
+      "resolved": "https://registry.561.group/@red-cup-engineering/uri-services-section/-/uri-services-section-0.1.1.tgz",
+      "integrity": "sha512-y5Ipia5hTOLT/0lzEX+DAC/qtfT7ey17jNT/2dh7r0fqromCUxUOQiJOYaapXXWqe79T1sCEmICjukFuLvizmw=="
+    },
+    {
+      "path": "node_modules/@red-cup-engineering/signcell",
+      "version": "0.11.1",
+      "resolved": "https://registry.561.group/@red-cup-engineering/signcell/-/signcell-0.11.1.tgz",
+      "integrity": "sha512-s1XoNDluDGVtQvWIsIlHjNVHOv2xzVJwK2i+Pf8mGQ60m3Llxpo/RQZvDXb3pAUWk9fkxOTobWtG8bOyqDlZQQ=="
+    },
+    {
+      "path": "node_modules/@red-cup-engineering/signcell/node_modules/@red-cup-engineering/computer-data-engineering-services-section",
+      "version": "0.3.1",
+      "resolved": "https://registry.561.group/@red-cup-engineering/computer-data-engineering-services-section/-/computer-data-engineering-services-section-0.3.1.tgz",
+      "integrity": "sha512-P8SMvW65n+jvHnQpI3lbIKsuMm8V3ilXZxUDKdccRd26gnF7s7w8aXb/ogdLIS+/qiEB+Mjj1Lm266K3cveGAw=="
+    },
+    {
+      "path": "node_modules/@red-cup-engineering/signcell/node_modules/@red-cup-engineering/computer-data-engineering-services-section/node_modules/@red-cup-engineering/semiotic-content-address",
+      "version": "0.1.0",
+      "resolved": "https://registry.561.group/@red-cup-engineering/semiotic-content-address/-/semiotic-content-address-0.1.0.tgz",
+      "integrity": "sha512-5+Rap5Ya8biH9nRzVl4HadfIuNomBYfxdDtV7Ly35wvTPrEYrglXZRuXY9Mg0vGQXruTrlBzxaAiYQUXvgyIaQ=="
+    },
+    {
+      "path": "node_modules/@red-cup-engineering/signcell/node_modules/@red-cup-engineering/json-services-section",
+      "version": "0.4.0",
+      "resolved": "https://registry.561.group/@red-cup-engineering/json-services-section/-/json-services-section-0.4.0.tgz",
+      "integrity": "sha512-WjToogRIj9qq5VaPQ52Lao8v/rXhSX7umi+rEn0Xysnfv6qAv77llXe68wboADrpQK2micSBS3DSGJWd5CoZkg=="
+    },
+    {
+      "path": "node_modules/@red-cup-engineering/signcell/node_modules/@red-cup-engineering/metrologic",
+      "version": "0.13.0",
+      "resolved": "https://registry.561.group/@red-cup-engineering/metrologic/-/metrologic-0.13.0.tgz",
+      "integrity": "sha512-JDL+tHet8nelmUENKnpHzHxe6xirVowOyK4owG4RzyI+/jFUpr5bj/TBmnZxAGCfU1njkAC+gY9gyrDTJWwHzw=="
+    },
+    {
+      "path": "node_modules/@red-cup-engineering/signcell/node_modules/@red-cup-engineering/metrologic/node_modules/@red-cup-engineering/computer-data-engineering-services-section",
+      "version": "0.2.0",
+      "resolved": "https://registry.561.group/@red-cup-engineering/computer-data-engineering-services-section/-/computer-data-engineering-services-section-0.2.0.tgz",
+      "integrity": "sha512-fHoL1GrjGExKOuVosgLfUl0HK6WVQ1EZcOrR4LkC6XN6dUBbvOtA7n+mupaqvSSErWdDENL6SCPiiApgCaUOTQ=="
+    },
+    {
+      "path": "node_modules/@red-cup-engineering/signcell/node_modules/@red-cup-engineering/semiotic-content-address",
+      "version": "0.1.1",
+      "resolved": "https://registry.561.group/@red-cup-engineering/semiotic-content-address/-/semiotic-content-address-0.1.1.tgz",
+      "integrity": "sha512-tNwjWDw+7bNjda5MoMRF7vZYxWgS2ZFxvkVCH4hYWPPSgKkhRw19zOLlJsl81WN3d3xnlo1J59GbIFH2frUjgQ=="
+    },
+    {
+      "path": "node_modules/@red-cup-engineering/signcell/node_modules/@red-cup-engineering/uri-services-section",
+      "version": "0.1.1",
+      "resolved": "https://registry.561.group/@red-cup-engineering/uri-services-section/-/uri-services-section-0.1.1.tgz",
+      "integrity": "sha512-y5Ipia5hTOLT/0lzEX+DAC/qtfT7ey17jNT/2dh7r0fqromCUxUOQiJOYaapXXWqe79T1sCEmICjukFuLvizmw=="
+    },
+    {
+      "path": "node_modules/@red-cup-engineering/uri-services-section",
+      "version": "0.1.2",
+      "resolved": "https://registry.561.group/@red-cup-engineering/uri-services-section/-/uri-services-section-0.1.2.tgz",
+      "integrity": "sha512-jcChl/6edkCJ6o8N2dHuAOQH+JZGAL/v01MzsgT/UdeyYTe1sC36fjpgxIlPx1LAi5K3h+OquuWPjXa9yE7cJw=="
+    },
+    {
+      "path": "node_modules/@red-cup-engineering/uri-services-section/node_modules/@red-cup-engineering/json-services-section",
+      "version": "0.4.0",
+      "resolved": "https://registry.561.group/@red-cup-engineering/json-services-section/-/json-services-section-0.4.0.tgz",
+      "integrity": "sha512-WjToogRIj9qq5VaPQ52Lao8v/rXhSX7umi+rEn0Xysnfv6qAv77llXe68wboADrpQK2micSBS3DSGJWd5CoZkg=="
+    },
+    {
+      "path": "node_modules/cbor2",
+      "version": "2.4.0",
+      "resolved": "https://registry.561.group/cbor2/-/cbor2-2.4.0.tgz",
+      "integrity": "sha512-s6+CPoEI6tgwasK2cWMTXt5sy8Yxo4vgRmKgkJSCdKDL/0bHU3aYJoYeHRX7/oywKYA3bxcpqEYkXkrdHe0+0Q=="
+    },
+    {
+      "path": "node_modules/content-type",
+      "version": "1.0.5",
+      "resolved": "https://registry.561.group/content-type/-/content-type-1.0.5.tgz",
+      "integrity": "sha512-nTjqfcBFEipKdXCv4YDQWCfmcLZKm81ldF0pAopTvyrFGVbcR6P/VAAd5G7N+0tTr8QqiU0tFadD6FK4NtJwOA=="
+    },
+    {
+      "path": "node_modules/idn-hostname",
+      "version": "15.1.19",
+      "resolved": "https://registry.561.group/idn-hostname/-/idn-hostname-15.1.19.tgz",
+      "integrity": "sha512-pRGRbFpQWCptOBWw9Gn5DXtPdern5/XtdkcXdoEavjd+sh72jNm2eVI1eeysp64UisXPfaqoQrnLUKpSN4hJWw=="
+    },
+    {
+      "path": "node_modules/just-curry-it",
+      "version": "5.3.0",
+      "resolved": "https://registry.561.group/just-curry-it/-/just-curry-it-5.3.0.tgz",
+      "integrity": "sha512-silMIRiFjUWlfaDhkgSzpuAyQ6EX/o09Eu8ZBfmFwQMbax7+LQzeIU2CBrICT6Ne4l86ITCGvUCBpCubWYy0Yw=="
+    },
+    {
+      "path": "node_modules/punycode",
+      "version": "2.3.1",
+      "resolved": "https://registry.561.group/punycode/-/punycode-2.3.1.tgz",
+      "integrity": "sha512-vYt7UD1U9Wg6138shLtLOvdAu+8DsC/ilFtEVHcH+wydcSpNE20AfSOduf6MkRFahL5FY7X1oU7nKVZFtfq8Fg=="
+    },
+    {
+      "path": "node_modules/uuid",
+      "version": "14.0.3",
+      "resolved": "https://registry.561.group/uuid/-/uuid-14.0.3.tgz",
+      "integrity": "sha512-Sc5u1VVln93y1Xnz4R+CunOZc7R9LUcTmhj7Rc7Eg3HVcf7rVn2FOoa812fe0W8p3jD7xeoGSYbfqCGGH2B6xw=="
+    }
+  ],
+  "installedResolutionFileSha256": "769dfd8cc2ce2a5c24c640c22fbe188852d474a7cb5d5660b5acb2ef24a64732",
+  "qualification": {
+    "baseline": {
+      "command": "node --test --test-isolation=none --test-reporter=tap test/*.test.mjs",
+      "cases": 50,
+      "passed": 48,
+      "failed": 2,
+      "blockers": [
+        "retired SEAVT record-semantic-record import is not exported by declared 0.3.0",
+        "quota test expects 503 instead of an eligible house fallback 200"
+      ]
+    },
+    "namedSuite": {
+      "command": "node --test --test-isolation=none --test-reporter=tap test/*.test.mjs",
+      "cases": 57,
+      "passed": 57,
+      "failed": 0,
+      "skipped": 0,
+      "testNames": [
+        "listEligibleCreatives excludes non-live and self-promotion, keeps slot/property matches",
+        "listEligibleCreatives matches a slot only reachable via wildcard",
+        "listEligibleCreatives requires catalog, slot, and property",
+        "selectCreative returns null when nothing is eligible",
+        "selectCreative is deterministic for the same day and picks from the eligible set",
+        "selectCreative prefers creatives that declare the page's context, and says so",
+        "campaign expiry uses the supplied clock for both house and paid creatives",
+        "third-party eligibility refuses missing disclosure, expiry, unsafe redirect and untyped relations",
+        "third-party contextual admission fails closed while house placement still rotates",
+        "existing house-ad selector carries an actual sustaining support offer to two distinct real publishers",
+        "published public-proof campaign reaches relevant house slots and refuses unrelated contexts",
+        "paid contextual service refuses impossible calendar/secret/local supplier destinations before publication",
+        "existing nonpaid house placements retain their context rotation after paid admission hardens",
+        "one complete observed opportunity has original data-provider content identity",
+        "distinct events have distinct identities without a common mutable sequence",
+        "selection and billable impression are not accepted event types",
+        "invalid page context and missing occurrence identity refuse without issuing an address",
+        "seven title invitations retain exact destinations and are inactive source records",
+        "prepared game campaigns cannot serve, record a view or redirect before destination receiving",
+        "hypothetically received copies use existing contextual house delivery with zero paid writes",
+        "game invitations refuse unrelated pages, publishers and self-promotion",
+        "concurrent events commute through one unique KV PUT apiece",
+        "provider cursor walks all KV pages and does not mistake an empty page for completion",
+        "historical v1 events remain discoverable without any rewriting",
+        "invalid series, limits and non-advancing KV cursors are rejected",
+        "KV storage failure refuses event receipt instead of claiming an impression",
+        "canonicalJson sorts keys regardless of insertion order",
+        "buildDeliveryReceipt validates required fields and type",
+        "buildDeliveryReceipt is content-addressed and chains prevHash",
+        "buildDeliveryReceipt is deterministic for identical input",
+        "existing journal importer processes all provider pages from both distinct evidence series",
+        "cursor refusal halts without announcing a completed sweep",
+        "untrusted or malformed service origin cannot direct journal intake",
+        "declared native SEAVT store preserves receipt bytes and identities across a fresh intake",
+        "native intake refuses an earlier journal layout before fetching or creating a second store",
+        "native intake refuses a corrupt receipt bucket without overwriting evidence or fetching",
+        "a different provider body cannot be silently skipped under an already received receipt id",
+        "an interrupted native sweep retains received evidence and restarts without duplication",
+        "service and catalog are readable and preserve CORS",
+        "house creative selection uses aggregate WAE and consumes zero KV writes",
+        "house view report uses aggregate WAE with no KV and does not pretend to be a durable impression",
+        "house redirect stays useful through KV outages without writing a fake paid receipt",
+        "paid selection requires a storage binding but never records a premature impression",
+        "view preflight and paid visible-placement report issue one uniquely addressed KV event",
+        "paid redirect records a distinct event with one KV PUT or refuses",
+        "concurrent paid events never overwrite a shared KV sequence",
+        "paged receipts preserve distinct v2 events and read-only legacy chain",
+        "invalid placement, missing creative, unknown relation and self-promotion never produce events",
+        "paid quota hold does not interrupt house delivery and resets at midnight UTC",
+        "unknown KV errors can retry without leaking provider details or advertising a paid view",
+        "aggregate sink failures never prevent a first-party creative from displaying",
+        "expiry refuses paid selection, view and redirects at the exact boundary",
+        "first-party promotions remain operable without a paid-event sink",
+        "paid-only storage failure remains 503 while unrelated inventory remains 404",
+        "quota-held paid campaigns yield to house promotions and recover at UTC reset",
+        "worker refuses unsafe house redirects before delivery, view and click event counting",
+        "worker refuses malformed sponsored source expiry/targets before KV mutation"
+      ],
+      "outputSha256": "d6140f0cf5913111cc44bf3e327f7a091427433bfa72408402d119c2b253150d"
+    },
+    "packageSuite": {
+      "command": "npm test",
+      "reportedTestFiles": 7,
+      "passed": 7,
+      "failed": 0,
+      "outputSha256": "b7a79ee42e154a39d045c3fbeaed3d3f0e7bea65f2fb3aea763d446fbe2d04b1"
+    },
+    "syntax": {
+      "command": "npm run check",
+      "sourceAndOperationModules": 9,
+      "passed": true
+    },
+    "transport": "Controlled fetch responses and explicit in-memory KV/activity boundaries. Native declared providers, Web Request/Response, and real temporary filesystem stores; no provider substitutes."
+  },
+  "acceptance": [
+    "Original paid/house public destination admission, strict expiry and bounded contextual policies retained.",
+    "Eligible house fallback 200 carries the actual house creative without paid KV writes; paid-only refusals and UTC quota reset retained.",
+    "Native SEAVT strict record discovery and durable put replace an unavailable retired API.",
+    "Original legacy and current receipt bodies, IDs, occurrence times, relation and evidence envelope preserved.",
+    "Repeat intake skips identical receipts; changed content under an existing ID refuses.",
+    "Corrupt native and earlier legacy layouts refuse before fetch without overwriting evidence or creating parallel storage.",
+    "Partial provider failure retains already received receipts; restart receives only remaining receipts.",
+    "All seven merged game invitations remain coming-soon; original catalog blob unchanged."
+  ],
+  "limits": [
+    "Source qualification and draft checkpoint only; no package publication, consumer installation, production deployment or real publisher observation.",
+    "SEAVT is the existing declared source development/operations dependency; production Worker does not import it.",
+    "Earlier journal roots require supplier conversion; this change does not migrate historical stores.",
+    "Run one importer per root: native record discovery is not a cross-process transaction, and no concurrent-importer guarantee is claimed.",
+    "Receipt canonical-content comparison preserves received bodies but does not authenticate the reporting publisher or independently verify original event claims.",
+    "No paid campaign activation, synthetic view, financial conversion, billing or revenue claim."
+  ],
+  "qualifiedFiles": [
+    {
+      "path": "data/records/house-creatives.json",
+      "sha256": "2ac883e950c881ed4c1e6a27062134f436666b8a38a4962df42038ccf5a1ff5d"
+    },
+    {
+      "path": "data/records/schema/advertising-delivery-event-v2.schema.json",
+      "sha256": "9266d3cf2481c466ad752e5b4d1c8f1ee74a83b4bbd348307d2e85d8e4ea7fcc"
+    },
+    {
+      "path": "data/records/schema/advertising-delivery-event.schema.json",
+      "sha256": "aa78b5a6d5651168c8584976a3310a763bd7d9f0c957b0738b0a1a03103e91fe"
+    },
+    {
+      "path": "package.json",
+      "sha256": "229ad36fa1472165c1f05329e25e77c84406ded91274df7e814f57ff29f9d819"
+    },
+    {
+      "path": "scripts/list-catalog.mjs",
+      "sha256": "257c82ca0a6e09e2806214d9c22fef75b1de24ce68c7efa81e92b534c486da40"
+    },
+    {
+      "path": "scripts/select-creative.mjs",
+      "sha256": "b5c77f20ebab2f7ec9db3d256b68995b07dec805780361074af03881bd28dc8d"
+    },
+    {
+      "path": "scripts/sync-ad-receipts-to-journal.mjs",
+      "sha256": "2cc55d86587ca81b132811148480a89b073a3d3a8b07099e0c5dafbd1636bfc4"
+    },
+    {
+      "path": "src/advertising.mjs",
+      "sha256": "051a3785fa3d9fc4d03d008897d52c158a5d3f5b3a1c6fe8338fde6f77bc09bf"
+    },
+    {
+      "path": "src/catalog.mjs",
+      "sha256": "66bf725c858ec3c44038f8663c77dbb05fce0f3362b2cbc67c5ff3fee15c10d8"
+    },
+    {
+      "path": "src/delivery-events.mjs",
+      "sha256": "655791de5c574685d7202c2b1687ab20fde5582b5b0af7682b62d1024e855b3f"
+    },
+    {
+      "path": "src/kv-events.mjs",
+      "sha256": "f079f6bc4deeec31fb5dee27dce7e96325b28c4a89b1f6dee184a6981f8c405c"
+    },
+    {
+      "path": "src/receipts.mjs",
+      "sha256": "f638b8c3584d9a9d7a02fb52e2915cd63f3390f7abf84d14fa306c880e392ebc"
+    },
+    {
+      "path": "src/web/worker.mjs",
+      "sha256": "5e24d7f9c1e174bcd1f5673d7362fe60637a1e93da97c0046078ada199497a85"
+    },
+    {
+      "path": "test/advertising.test.mjs",
+      "sha256": "ec97c1b07e19f24c2ebe13218683e209ecb3a45a8adf01317f7b7ab1bae9ae90"
+    },
+    {
+      "path": "test/delivery-events.test.mjs",
+      "sha256": "da919938126baa9022b566d1ec6bc300a31a0c05f4ae514aca3642b273faefc5"
+    },
+    {
+      "path": "test/game-cultivation.test.mjs",
+      "sha256": "d541c167e3ecaf7f039aa5a108bd406e65a113477786fced9e60e6c493305f80"
+    },
+    {
+      "path": "test/kv-events.test.mjs",
+      "sha256": "c81db48de7504e5008ec104e2bab71f66562c3afeb4c860e2afac5fd75d0fd78"
+    },
+    {
+      "path": "test/receipts.test.mjs",
+      "sha256": "6459d51e79defee4ff8c26d4e8caa629428a251309e194dfdef5f8acf8e25b91"
+    },
+    {
+      "path": "test/sync-ad-events.test.mjs",
+      "sha256": "349fbfabe973b821b9ffbbdf680e72787a887453505e40cf0ab6fdf47423bf46"
+    },
+    {
+      "path": "test/worker.test.mjs",
+      "sha256": "8f0b87adba6c7ff6f93d8e0709aadafc1be151ae84f250b45806a613e6f14cd2"
+    }
+  ]
+}

@@ -199,7 +199,13 @@ test("paid quota hold does not interrupt house delivery and resets at midnight U
     assert.equal((await instance.fetch(new Request(base+paidView,{method:"POST"}),{AD_RECEIPTS:kv})).status,503);
     assert.equal(attempts.length,1);
     assert.equal((await instance.fetch(new Request(base+paidView,{method:"POST"}),{AD_RECEIPTS:kv})).status,503);
-    assert.equal((await instance.fetch(new Request(base+paidQuery),{AD_RECEIPTS:kv})).status,503);
+    const fallback=await instance.fetch(new Request(base+paidQuery),{AD_RECEIPTS:kv});
+    assert.equal(fallback.status,200);
+    const delivered=await fallback.json();
+    assert.equal(delivered.creative.id,house.id);
+    assert.equal(delivered.creative.relationship,"house");
+    assert.equal(Object.hasOwn(delivered,"receipt"),false);
+    assert.deepEqual(kv.writes,[]);
     assert.equal((await instance.fetch(new Request(base+paidClick),{AD_RECEIPTS:kv})).status,503);
     assert.equal(attempts.length,1);
     assert.equal((await instance.fetch(new Request(base+houseQuery),{AD_RECEIPTS:kv})).status,200);

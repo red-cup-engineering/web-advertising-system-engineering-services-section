@@ -460,6 +460,230 @@
       "href": "https://github.com/561-group/.github/blob/main/OPEN-WORK.md",
       "imageAlt": null,
       "relationship": "house"
+    },
+    {
+      "id": "pig-game-cultivation-20261025",
+      "status": "coming-soon",
+      "slots": [
+        "afterArticle",
+        "footer"
+      ],
+      "properties": [
+        "koios-news",
+        "play-561-group"
+      ],
+      "property": "parlor-pig",
+      "contexts": [
+        "games",
+        "culture-entertainment"
+      ],
+      "allowedContexts": [
+        "games",
+        "culture-entertainment"
+      ],
+      "tags": [
+        "house",
+        "games",
+        "parlor",
+        "pig"
+      ],
+      "title": "One more roll, or bank it?",
+      "body": "Play Pig against the house bot. Read the computed odds, make your call and race to 100. Free practice play.",
+      "href": "https://parlor.561.group/pig/",
+      "imageAlt": null,
+      "relationship": "house"
+    },
+    {
+      "id": "farkle-game-cultivation-20261025",
+      "status": "coming-soon",
+      "slots": [
+        "afterArticle",
+        "footer"
+      ],
+      "properties": [
+        "koios-news",
+        "play-561-group"
+      ],
+      "property": "parlor-farkle",
+      "contexts": [
+        "games",
+        "culture-entertainment"
+      ],
+      "allowedContexts": [
+        "games",
+        "culture-entertainment"
+      ],
+      "tags": [
+        "house",
+        "games",
+        "parlor",
+        "farkle"
+      ],
+      "title": "Keep the dice. Risk the turn.",
+      "body": "Choose scoring dice in Farkle, bank your points or roll for more. Computed odds stay on the table. Free practice play.",
+      "href": "https://parlor.561.group/farkle/",
+      "imageAlt": null,
+      "relationship": "house"
+    },
+    {
+      "id": "yacht-game-cultivation-20261025",
+      "status": "coming-soon",
+      "slots": [
+        "afterArticle",
+        "footer"
+      ],
+      "properties": [
+        "koios-news",
+        "play-561-group"
+      ],
+      "property": "parlor-yacht",
+      "contexts": [
+        "games",
+        "culture-entertainment"
+      ],
+      "allowedContexts": [
+        "games",
+        "culture-entertainment"
+      ],
+      "tags": [
+        "house",
+        "games",
+        "parlor",
+        "yacht"
+      ],
+      "title": "Make five dice tell a story.",
+      "body": "Keep, reroll and choose your category in a two-player pass-and-play Yacht match. Free browser play.",
+      "href": "https://parlor.561.group/yacht/",
+      "imageAlt": null,
+      "relationship": "house"
+    },
+    {
+      "id": "chutes-game-cultivation-20261025",
+      "status": "coming-soon",
+      "slots": [
+        "afterArticle",
+        "footer"
+      ],
+      "properties": [
+        "koios-news",
+        "play-561-group"
+      ],
+      "property": "parlor-chutes",
+      "contexts": [
+        "games",
+        "culture-entertainment"
+      ],
+      "allowedContexts": [
+        "games",
+        "culture-entertainment"
+      ],
+      "tags": [
+        "house",
+        "games",
+        "parlor",
+        "chutes"
+      ],
+      "title": "A small race with big reversals.",
+      "body": "Set up a Chutes & Ladders race for people and bots, follow the jumps and see who reaches the finish. Free browser play.",
+      "href": "https://parlor.561.group/chutes/",
+      "imageAlt": null,
+      "relationship": "house"
+    },
+    {
+      "id": "reels-game-cultivation-20261025",
+      "status": "coming-soon",
+      "slots": [
+        "afterArticle",
+        "footer"
+      ],
+      "properties": [
+        "koios-news",
+        "play-561-group"
+      ],
+      "property": "parlor-reels",
+      "contexts": [
+        "games",
+        "culture-entertainment"
+      ],
+      "allowedContexts": [
+        "games",
+        "culture-entertainment"
+      ],
+      "tags": [
+        "house",
+        "games",
+        "parlor",
+        "reels"
+      ],
+      "title": "Spin with the odds in sight.",
+      "body": "Try Fair Spin with a practice bankroll and permanently visible computed odds. No money enters or leaves the game.",
+      "href": "https://parlor.561.group/reels/",
+      "imageAlt": null,
+      "relationship": "house"
+    },
+    {
+      "id": "stoke-game-cultivation-20261025",
+      "status": "coming-soon",
+      "slots": [
+        "afterArticle",
+        "footer"
+      ],
+      "properties": [
+        "koios-news",
+        "play-561-group"
+      ],
+      "property": "stoke",
+      "contexts": [
+        "games",
+        "culture-entertainment"
+      ],
+      "allowedContexts": [
+        "games",
+        "culture-entertainment"
+      ],
+      "tags": [
+        "house",
+        "games",
+        "idle",
+        "stoke"
+      ],
+      "title": "Build a production loop you understand.",
+      "body": "Connect producers, upgrade your network and explore the growth of Stoke's idle factory. Free browser play.",
+      "href": "https://stoke.561.group/",
+      "imageAlt": null,
+      "relationship": "house"
+    },
+    {
+      "id": "flickering-delve-game-cultivation-20261025",
+      "status": "coming-soon",
+      "slots": [
+        "afterArticle",
+        "footer"
+      ],
+      "properties": [
+        "koios-news",
+        "play-561-group"
+      ],
+      "property": "flickering",
+      "contexts": [
+        "games",
+        "culture-entertainment"
+      ],
+      "allowedContexts": [
+        "games",
+        "culture-entertainment"
+      ],
+      "tags": [
+        "house",
+        "games",
+        "idle",
+        "flickering-delve"
+      ],
+      "title": "Give the orders. See what the dungeon does.",
+      "body": "Program standing orders for a descent in Flickering Delve, then adjust your strategy as the adventure unfolds. Free browser play.",
+      "href": "https://flickering.561.group/",
+      "imageAlt": null,
+      "relationship": "house"
     }
   ]
 }

@@ -684,6 +684,43 @@
       "href": "https://flickering.561.group/",
       "imageAlt": null,
       "relationship": "house"
+    },
+    {
+      "id": "assist-public-guides-20261025",
+      "status": "live",
+      "relationship": "house",
+      "slots": [
+        "afterArticle",
+        "footer"
+      ],
+      "properties": [
+        "koios-news",
+        "play-561-group"
+      ],
+      "property": "assist-561-group",
+      "contexts": [
+        "technology",
+        "careers",
+        "crypto",
+        "games"
+      ],
+      "allowedContexts": [
+        "technology",
+        "careers",
+        "crypto",
+        "games"
+      ],
+      "tags": [
+        "house",
+        "assist",
+        "daily-activities",
+        "remote-work"
+      ],
+      "title": "Plan your next step with ASSIST",
+      "body": "Explore daily activity guides for VeChain, remote work and your Kalshi workspace. Check provider eligibility, identity requirements and possible costs before you continue.",
+      "href": "https://assist-561.briskolm35.chatgpt.site/",
+      "expiresAt": "2026-11-25T00:00:00Z",
+      "imageAlt": null
     }
   ]
 }
